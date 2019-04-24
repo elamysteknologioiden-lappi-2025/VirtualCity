@@ -230,9 +230,27 @@ public class pLab_EditorOSM : Editor {
 
 
         if (GUILayout.Button("Generate MAP")) {
+
+
             osmReader.GetDataFromServer(double.Parse(editorData.minLat), double.Parse(editorData.minLon), double.Parse(editorData.maxLat), double.Parse(editorData.maxLon),
                 editorData.waterMaterial, editorData.roofMaterial, editorData.wallMaterial, editorData.roadMaterial, editorData.green1Material, editorData.green2Material, editorData.green3Material, editorData.brownMaterial, editorData.wetlandMaterial);
         }
+
+        if (GUILayout.Button("Load From file")) {
+
+            string path = EditorUtility.OpenFilePanel("Select OSM file", "", "osm");
+             osmReader.GenerateMapFromFile(path,
+                editorData.waterMaterial, 
+                editorData.roofMaterial, 
+                editorData.wallMaterial, 
+                editorData.roadMaterial,
+                editorData.green1Material,
+                editorData.green2Material, 
+                editorData.green3Material, 
+                editorData.brownMaterial,
+                editorData.wetlandMaterial);
+        }
+
     }
     #endregion
 }

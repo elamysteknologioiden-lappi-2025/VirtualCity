@@ -42,6 +42,7 @@ using Assets.Tools.OSMRoad.Scripts.XmlObjects;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Xml;
 using UnityEditor;
@@ -389,12 +390,94 @@ public class pLab_OSMReader : MonoBehaviour {
     }
 
     /// <summary>
-    /// Starts GetRequestCoroutine
+    /// GenerateMapFromFile
     /// </summary>
-    /// <param name="aRequest"></param>
-    /// <param name="aBlockCount"></param>
-    /// <param name="aRequestCount"></param>
-    public void GetRequest(string aRequest, int aBlockCount, int aRequestCount) {
+    /// <param name="aPath"></param>
+    /// <param name="aWaterMaterial"></param>
+    /// <param name="aRoofMaterial"></param>
+    /// <param name="aWallMaterial"></param>
+    /// <param name="aRoadMaterial"></param>
+    /// <param name="aRailwayMaterial"></param>
+    /// <param name="aGreen1Material"></param>
+    /// <param name="aGreen2Material"></param>
+    /// <param name="aGreen3Material"></param>
+    /// <param name="aBrownMaterial"></param>
+    /// <param name="aWetlandMaterial"></param>
+    public void GenerateMapFromFile(string aPath,
+        Material aWaterMaterial = null, Material aRoofMaterial = null, Material aWallMaterial = null,
+        Material aRoadMaterial = null, Material aRailwayMaterial = null, Material aGreen1Material = null,
+        Material aGreen2Material = null, Material aGreen3Material = null, Material aBrownMaterial = null,
+        Material aWetlandMaterial = null) {
+
+        waterMaterial = aWaterMaterial;
+        roofMaterial = aRoofMaterial;
+        wallMaterial = aWallMaterial;
+        roadMaterial = aRoadMaterial;
+        railwayMaterial = aRailwayMaterial;
+        green1Material = aGreen1Material;
+        green2Material = aGreen2Material;
+        green3Material = aGreen3Material;
+        brownMaterial = aBrownMaterial;
+        wetlandMaterial = aWetlandMaterial;
+
+        // TMP VALUES, PLEASE CHANGE THOSEs
+        double latBlock = 0.005;
+        double lonBlock = 0.010;
+
+
+        string content = File.ReadAllText(aPath);
+
+        List<Node> nodes = new List<Node>();
+        doc.LoadXml(content);
+
+       //Debug.LogError(content);
+
+        XmlNodeList elementList = doc.GetElementsByTagName("node");
+        XmlNodeList boundsList = doc.GetElementsByTagName("bounds");
+
+        if (boundsList.Count > 0) {
+            XmlNode boundNode = boundsList[0];
+            pLAB_GeoUtils.LatLongtoUTM(double.Parse(boundNode.Attributes["minlat"].InnerText), double.Parse(boundNode.Attributes["minlon"].InnerText), out UTMN_Zero, out UTME_Zero);
+        } else {
+
+            double minLat = 99999;
+            double minLon = 99999;
+
+            foreach (XmlNode i in elementList) {
+                if (i.Attributes["lat"].InnerText.Length > 0) {
+                    if( minLat >= double.Parse(i.Attributes["lat"].InnerText)) {
+                        minLat = double.Parse(i.Attributes["lat"].InnerText);
+                    }
+
+                }
+
+                if (i.Attributes["lon"].InnerText.Length > 0) {
+                    if (minLon >= double.Parse(i.Attributes["lon"].InnerText)) {
+                        minLon = double.Parse(i.Attributes["lon"].InnerText);
+                    }
+
+                }
+            }
+            pLAB_GeoUtils.LatLongtoUTM(minLat, minLon, out UTMN_Zero, out UTME_Zero);
+        }
+
+
+
+
+
+        Create(content, 1, UTMN_Zero, UTME_Zero);
+
+        HandleMultiPoly();
+        finishedGeneratingMap = true;
+    }
+
+        /// <summary>
+        /// Starts GetRequestCoroutine
+        /// </summary>
+        /// <param name="aRequest"></param>
+        /// <param name="aBlockCount"></param>
+        /// <param name="aRequestCount"></param>
+        public void GetRequest(string aRequest, int aBlockCount, int aRequestCount) {
         StartCoroutine(GetRequestCoroutine(aRequest, aBlockCount, aRequestCount));
     }
 
@@ -444,17 +527,17 @@ public class pLab_OSMReader : MonoBehaviour {
     /// </summary>
     /// <param name="aXML">Data File</param>
     /// <param name="aBlockCount">Index Number of Block</param>
-    public void Create(string aXML, int aBlockCount) {
+    public void Create(string aXML, int aBlockCount, double utmX = 0, double utmY = 0) {
 
         List<Node> nodes = new List<Node>();
         doc.LoadXml(aXML);
         XmlNodeList elementList = doc.GetElementsByTagName("node");
         XmlNodeList boundsList = doc.GetElementsByTagName("bounds");
         XmlNode boundNode = boundsList[0];
-        double utmX = 0;
-        double utmY = 0;
+
         double xBound = 0;
         double yBound = 0;
+        if(utmX == 0 && utmY == 0)
         pLAB_GeoUtils.LatLongtoUTM(double.Parse(boundNode.Attributes["minlat"].InnerText), double.Parse(boundNode.Attributes["minlon"].InnerText), out utmX, out utmY);
 
         utmX = utmX - UTMN_Zero;
@@ -1467,6 +1550,7 @@ public class pLab_OSMReader : MonoBehaviour {
             wall.gameObject.GetComponent<MeshFilter>().sharedMesh = mshWall;
             wall.gameObject.GetComponent<MeshRenderer>().material = wallMaterial;
             wall.gameObject.GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
+                            poly.CalcPlaneNormal(Vector3.up);
             Poly2Mesh.CreateGameObject(poly, buildingsObjects[i].gameObject);
             buildingsObjects[i].gameObject.AddComponent<BoxCollider>();
 
@@ -1657,7 +1741,7 @@ public class pLab_OSMReader : MonoBehaviour {
 
                 if (item2.Attributes[0].Name == "k" && item2.Attributes[0].InnerText == "natural") {
                     if (item2.Attributes[1].Name == "v" && item2.Attributes[1].InnerText == "tree") {
-                        int no = UnityEngine.Random.Range(1, 11);
+                        int no = UnityEngine.Random.Range(1, 1);
                         PlaceObjectOnNode("tree" + no.ToString(), idNum);
                     }
                 }
