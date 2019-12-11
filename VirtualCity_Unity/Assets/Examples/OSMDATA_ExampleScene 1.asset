@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 941b6b485ee4efb4d8078758b6d30ac6, type: 3}
+  m_Name: OSMDATA_ExampleScene 1
+  m_EditorClassIdentifier: 
+  waterMaterial: {fileID: 2100000, guid: a56e2fad1a18aaf459bc2f9b750b8749, type: 2}
+  roadMaterial: {fileID: 2100000, guid: 73ba0fc010735d04898dd3c818810797, type: 2}
+  railwayMaterial: {fileID: 0}
+  wallMaterial: {fileID: 2100000, guid: ed648950e31d73645b438952e4275fa4, type: 2}
+  roofMaterial: {fileID: 2100000, guid: 87271252ec8ffdd4da84e7b786ea0813, type: 2}
+  green1Material: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
+  green2Material: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
+  green3Material: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
+  brownMaterial: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
+  wetlandMaterial: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
+  osmDataFile: 
+  minLat: 66.4800
+  minLon: 25.6600
+  maxLat: 66.5160
+  maxLon: 25.7732
+  waterLayer: 4
+  roadLayer: 31

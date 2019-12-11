@@ -40,7 +40,7 @@
 
 using UnityEngine;
 using UnityEditor;
-
+using System.IO;
 
 /// <summary>
 /// pLab_EditorOSM
@@ -82,11 +82,24 @@ public class pLab_EditorOSM : Editor {
     #region // Public Methods
 
     public override void OnInspectorGUI() {
-        pLab_OSMReader osmReader = (pLab_OSMReader)target;
+        pLab_OSMReader osmReader = (pLab_OSMReader) target;
 
-        if (null == editorData) {
-            editorData = osmReader.Open();
+        osmReader.editorData = (OSMEditorData) EditorGUILayout.ObjectField("Editor data", osmReader.editorData, typeof(OSMEditorData), false);
+        if (null == osmReader.editorData) {
+            osmReader.editorData = osmReader.Open();
         }
+
+        editorData = osmReader.editorData;
+
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("API URL");
+        osmReader.apiUrl = EditorGUILayout.TextField(osmReader.apiUrl);
+        EditorGUILayout.EndHorizontal();
+
+        // Start of area coordinates
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Map area coordinates", EditorStyles.boldLabel);
 
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Min Lat");
@@ -131,10 +144,14 @@ public class pLab_EditorOSM : Editor {
         }
         EditorGUILayout.EndHorizontal();
 
+        // Start of Materials
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Materials", EditorStyles.boldLabel);
 
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Water Material");
-        Material waterMaterial = (Material)EditorGUILayout.ObjectField("material", editorData.waterMaterial, typeof(Material));
+        Material waterMaterial = (Material)EditorGUILayout.ObjectField("", editorData.waterMaterial, typeof(Material), false);
         if (waterMaterial != editorData.waterMaterial) {
             editorData.waterMaterial = waterMaterial;
             EditorUtility.SetDirty(editorData);
@@ -142,21 +159,9 @@ public class pLab_EditorOSM : Editor {
         }
         EditorGUILayout.EndHorizontal();
 
-
-        EditorGUILayout.BeginHorizontal();
-        GUILayout.Label("Roof Material");
-        Material roofMaterial = (Material)EditorGUILayout.ObjectField("material", editorData.roofMaterial, typeof(Material));
-        if (roofMaterial != editorData.roofMaterial) {
-            editorData.roofMaterial = roofMaterial;
-            EditorUtility.SetDirty(editorData);
-            osmReader.SaveOSMEditorData();
-        }
-        EditorGUILayout.EndHorizontal();
-
-
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Road Material");
-        Material roadMaterial = (Material)EditorGUILayout.ObjectField("material", editorData.roadMaterial, typeof(Material));
+        Material roadMaterial = (Material)EditorGUILayout.ObjectField("", editorData.roadMaterial, typeof(Material), false);
 
         if (roadMaterial != editorData.roadMaterial) {
             editorData.roadMaterial = roadMaterial;
@@ -165,10 +170,30 @@ public class pLab_EditorOSM : Editor {
         }
         EditorGUILayout.EndHorizontal();
 
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Railway Material");
+        Material railwayMaterial = (Material)EditorGUILayout.ObjectField("", editorData.railwayMaterial, typeof(Material), false);
+
+        if (railwayMaterial != editorData.railwayMaterial) {
+            editorData.railwayMaterial = railwayMaterial;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Roof Material");
+        Material roofMaterial = (Material)EditorGUILayout.ObjectField("", editorData.roofMaterial, typeof(Material), false);
+        if (roofMaterial != editorData.roofMaterial) {
+            editorData.roofMaterial = roofMaterial;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+        EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Wall Material");
-        Material wallMaterial = (Material)EditorGUILayout.ObjectField("material", editorData.wallMaterial, typeof(Material));
+        Material wallMaterial = (Material)EditorGUILayout.ObjectField("", editorData.wallMaterial, typeof(Material), false);
         if (wallMaterial != editorData.wallMaterial) {
             editorData.wallMaterial = wallMaterial;
             EditorUtility.SetDirty(editorData);
@@ -179,7 +204,7 @@ public class pLab_EditorOSM : Editor {
 
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Green1 Material");
-        Material green1Material = (Material)EditorGUILayout.ObjectField("material", editorData.green1Material, typeof(Material));
+        Material green1Material = (Material)EditorGUILayout.ObjectField("", editorData.green1Material, typeof(Material), false);
         if (green1Material != editorData.green1Material) {
             editorData.green1Material = green1Material;
             EditorUtility.SetDirty(editorData);
@@ -190,7 +215,7 @@ public class pLab_EditorOSM : Editor {
 
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Green2 Material");
-        Material green2Material = (Material)EditorGUILayout.ObjectField("material", editorData.green2Material, typeof(Material));
+        Material green2Material = (Material)EditorGUILayout.ObjectField("", editorData.green2Material, typeof(Material), false);
         if (green2Material != editorData.green2Material) {
             editorData.green2Material = green2Material;
             EditorUtility.SetDirty(editorData);
@@ -200,7 +225,7 @@ public class pLab_EditorOSM : Editor {
 
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Green3 Material");
-        Material green3Material = (Material)EditorGUILayout.ObjectField("material", editorData.green3Material, typeof(Material));
+        Material green3Material = (Material)EditorGUILayout.ObjectField("", editorData.green3Material, typeof(Material), false);
         if (green3Material != editorData.green3Material) {
             editorData.green3Material = green3Material;
             EditorUtility.SetDirty(editorData);
@@ -208,9 +233,11 @@ public class pLab_EditorOSM : Editor {
         }
         EditorGUILayout.EndHorizontal();
 
+
+
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Brown Material");
-        Material brownMaterial = (Material)EditorGUILayout.ObjectField("material", editorData.brownMaterial, typeof(Material));
+        Material brownMaterial = (Material)EditorGUILayout.ObjectField("", editorData.brownMaterial, typeof(Material), false);
         if (brownMaterial != editorData.brownMaterial) {
             editorData.brownMaterial = brownMaterial;
             EditorUtility.SetDirty(editorData);
@@ -218,9 +245,11 @@ public class pLab_EditorOSM : Editor {
         }
         EditorGUILayout.EndHorizontal();
 
+
+
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("Wetland Material");
-        Material wetlandMaterial = (Material)EditorGUILayout.ObjectField("material", editorData.wetlandMaterial, typeof(Material));
+        Material wetlandMaterial = (Material)EditorGUILayout.ObjectField("", editorData.wetlandMaterial, typeof(Material), false);
         if (wetlandMaterial != editorData.wetlandMaterial) {
             editorData.wetlandMaterial = wetlandMaterial;
             EditorUtility.SetDirty(editorData);
@@ -228,27 +257,210 @@ public class pLab_EditorOSM : Editor {
         }
         EditorGUILayout.EndHorizontal();
 
+        // End of Materials
+        
+        // Start of Layers
 
-        if (GUILayout.Button("Generate MAP")) {
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Layers", EditorStyles.boldLabel);
 
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Water Layer");
+        int waterLayer = EditorGUILayout.LayerField("", editorData.waterLayer);
 
-            osmReader.GetDataFromServer(double.Parse(editorData.minLat), double.Parse(editorData.minLon), double.Parse(editorData.maxLat), double.Parse(editorData.maxLon),
-                editorData.waterMaterial, editorData.roofMaterial, editorData.wallMaterial, editorData.roadMaterial, editorData.green1Material, editorData.green2Material, editorData.green3Material, editorData.brownMaterial, editorData.wetlandMaterial);
+        if (waterLayer != editorData.waterLayer) {
+            editorData.waterLayer = waterLayer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
         }
 
-        if (GUILayout.Button("Load From file")) {
+        EditorGUILayout.EndHorizontal();
 
-            string path = EditorUtility.OpenFilePanel("Select OSM file", "", "osm");
-             osmReader.GenerateMapFromFile(path,
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Road Layer");
+        int roadLayer = EditorGUILayout.LayerField("", editorData.roadLayer);
+
+        if (roadLayer != editorData.roadLayer) {
+            editorData.roadLayer = roadLayer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+
+        EditorGUILayout.EndHorizontal();
+        
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Railway Layer");
+        int railwayLayer = EditorGUILayout.LayerField("", editorData.railwayLayer);
+
+        if (railwayLayer != editorData.railwayLayer) {
+            editorData.railwayLayer = railwayLayer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        // EditorGUILayout.BeginHorizontal();
+        // GUILayout.Label("Roof Layer");
+        // int roofLayer = EditorGUILayout.LayerField("", editorData.roofLayer);
+
+        // if (roofLayer != editorData.roofLayer) {
+        //     editorData.roofLayer = roofLayer;
+        //     EditorUtility.SetDirty(editorData);
+        //     osmReader.SaveOSMEditorData();
+        // }
+
+        // EditorGUILayout.EndHorizontal();
+
+        // EditorGUILayout.BeginHorizontal();
+        // GUILayout.Label("Wall Layer");
+        // int wallLayer = EditorGUILayout.LayerField("", editorData.wallLayer);
+
+        // if (wallLayer != editorData.wallLayer) {
+        //     editorData.wallLayer = wallLayer;
+        //     EditorUtility.SetDirty(editorData);
+        //     osmReader.SaveOSMEditorData();
+        // }
+
+        // EditorGUILayout.EndHorizontal();
+        
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Building Layer");
+        int buildingLayer = EditorGUILayout.LayerField("", editorData.buildingLayer);
+
+        if (buildingLayer != editorData.buildingLayer) {
+            editorData.buildingLayer = buildingLayer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Greenway 1 Layer");
+        int greenway1Layer = EditorGUILayout.LayerField("", editorData.greenway1Layer);
+
+        if (greenway1Layer != editorData.greenway1Layer) {
+            editorData.greenway1Layer = greenway1Layer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Greenway 2 Layer");
+        int greenway2Layer = EditorGUILayout.LayerField("", editorData.greenway2Layer);
+
+        if (greenway2Layer != editorData.greenway2Layer) {
+            editorData.greenway2Layer = greenway2Layer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Greenway 3 Layer");
+        int greenway3Layer = EditorGUILayout.LayerField("", editorData.greenway3Layer);
+
+        if (greenway3Layer != editorData.greenway3Layer) {
+            editorData.greenway3Layer = greenway3Layer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Brownway Layer");
+        int brownwayLayer = EditorGUILayout.LayerField("", editorData.brownwayLayer);
+
+        if (brownwayLayer != editorData.brownwayLayer) {
+            editorData.brownwayLayer = brownwayLayer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Wetland Layer");
+        int wetlandLayer = EditorGUILayout.LayerField("", editorData.wetlandLayer);
+
+        if (wetlandLayer != editorData.wetlandLayer) {
+            editorData.wetlandLayer = wetlandLayer;
+            EditorUtility.SetDirty(editorData);
+            osmReader.SaveOSMEditorData();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space();
+
+        if (GUILayout.Button("Generate Map (API)")) {
+
+            osmReader.GetDataFromServer(
+                double.Parse(editorData.minLat),
+                double.Parse(editorData.minLon), 
+                double.Parse(editorData.maxLat), 
+                double.Parse(editorData.maxLon),
                 editorData.waterMaterial, 
                 editorData.roofMaterial, 
                 editorData.wallMaterial, 
-                editorData.roadMaterial,
-                editorData.green1Material,
+                editorData.roadMaterial, 
+                editorData.railwayMaterial, 
+                editorData.green1Material, 
                 editorData.green2Material, 
                 editorData.green3Material, 
-                editorData.brownMaterial,
-                editorData.wetlandMaterial);
+                editorData.brownMaterial, 
+                editorData.wetlandMaterial, 
+                editorData.waterLayer,
+                editorData.buildingLayer,
+                // editorData.roofLayer,
+                // editorData.wallLayer,
+                editorData.roadLayer,
+                editorData.railwayLayer,
+                editorData.greenway1Layer,
+                editorData.greenway2Layer,
+                editorData.greenway3Layer,
+                editorData.brownwayLayer,
+                editorData.wetlandLayer
+                );
+        }
+
+        if (GUILayout.Button("Load and Generate Map from File...")) {
+
+            string path = EditorUtility.OpenFilePanel("Select OSM file", "", "osm");
+
+            //Check if the path is not empty and the path exists
+            if (path != "" && File.Exists(path)) {
+                osmReader.GenerateMapFromFile(path,
+                    editorData.waterMaterial, 
+                    editorData.roofMaterial, 
+                    editorData.wallMaterial, 
+                    editorData.roadMaterial,
+                    editorData.railwayMaterial,
+                    editorData.green1Material,
+                    editorData.green2Material, 
+                    editorData.green3Material, 
+                    editorData.brownMaterial,
+                    editorData.wetlandMaterial,
+                    editorData.waterLayer,
+                    editorData.buildingLayer,
+                    // editorData.roofLayer,
+                    // editorData.wallLayer,
+                    editorData.roadLayer,
+                    editorData.railwayLayer,
+                    editorData.greenway1Layer,
+                    editorData.greenway2Layer,
+                    editorData.greenway3Layer,
+                    editorData.brownwayLayer,
+                    editorData.wetlandLayer
+                    );
+            }
+
         }
 
     }

@@ -89,6 +89,13 @@ public enum InfraType {
 /// </summary>
 public class pLab_OSMReader : MonoBehaviour {
 
+    public OSMEditorData editorData;
+
+    // API CALL
+    // Example : https://api.openstreetmap.org/api/0.6/map?bbox=11.54,48.14,11.543,48.145
+    // min lon - min lat - max lon -  max lat
+    public string apiUrl = "https://api.openstreetmap.org/api/0.6/map?bbox=";
+
     /// <summary>
     /// XML document to load OSM data into
     /// </summary>
@@ -155,6 +162,27 @@ public class pLab_OSMReader : MonoBehaviour {
     /// Wetland Material
     /// </summary>
     private Material wetlandMaterial;
+
+    private int waterLayer = 4;
+
+    private int roadLayer = 0;
+
+    private int railwayLayer = 0;
+
+    private int buildingLayer = 0;
+    // private int wallLayer = 0;
+
+    // private int roofLayer = 0;
+
+    private int greenway1Layer = 0;
+
+    private int greenway2Layer = 0;
+
+    private int greenway3Layer = 0;
+
+    private int brownwayLayer = 0;
+
+    private int wetlandLayer = 0;
 
 
     /// <summary>
@@ -311,7 +339,12 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <returns></returns>
     public OSMEditorData Open() {
 #if UNITY_EDITOR //Editor only tag
-        OSMEditorData asset = AssetDatabase.LoadAssetAtPath("Assets/OSMDATA_" + EditorSceneManager.GetActiveScene().name + ".asset", typeof(OSMEditorData)) as OSMEditorData;
+        string[] assetGuids = AssetDatabase.FindAssets(string.Format("t:{0} {1}", typeof(OSMEditorData).Name, "OSMDATA_" + EditorSceneManager.GetActiveScene().name));
+        OSMEditorData asset = null;
+        if (assetGuids.Length > 0) {
+            asset = (OSMEditorData) AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(assetGuids[0]), typeof(OSMEditorData));
+        }
+        // OSMEditorData asset = AssetDatabase.LoadAssetAtPath("Assets/OSMDATA_" + EditorSceneManager.GetActiveScene().name + ".asset", typeof(OSMEditorData)) as OSMEditorData;
         if (asset == null) {
             asset = Create();
         }
@@ -334,16 +367,28 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="aRoofMaterial">Roof material</param>
     /// <param name="aWallMaterial">Wall material</param>
     /// <param name="aRoadMaterial">Road material</param>
+    /// <param name="aRailwayMaterial">Railway material</param>
     /// <param name="aGreen1Material">Green1 material</param>
     /// <param name="aGreen2Material">Green2 material</param>
     /// <param name="aGreen3Material">Green3 material</param>
     /// <param name="aBrownMaterial">Brown material</param>
     /// <param name="aWetlandMaterial">Wetland material</param>
+    /// <param name="aWaterLayer">Water layer</param>
+    /// <param name="aRoofLayer">Roof layer</param>
+    /// <param name="aWallLayer">Wall layer</param>
+    /// <param name="aRoadLayer">Road layer</param>
+    /// <param name="aRailwayLayer">Railway layer</param>
+    /// <param name="aGreenway1Layer">Greenway 1 layer</param>
+    /// <param name="aGreenway2Layer">Greenway 2 layer</param>
+    /// <param name="aGreenway3Layer">Greenway 3 layer</param>
+    /// <param name="aBrownwayLayer">Brownway layer</param>
+    /// <param name="aWetlandLayer">Wetland layer</param>
     public void GetDataFromServer(double aMinLat, double aMinLon, double aMaxLat, double aMaxLon,
         Material aWaterMaterial = null, Material aRoofMaterial = null, Material aWallMaterial = null,
         Material aRoadMaterial = null, Material aRailwayMaterial = null, Material aGreen1Material = null,
         Material aGreen2Material = null, Material aGreen3Material = null, Material aBrownMaterial = null,
-        Material aWetlandMaterial = null) {
+        Material aWetlandMaterial = null, int aWaterLayer = 4, int aBuildingLayer = 0, int aRoadLayer = 0, int aRailwayLayer = 0, 
+        int aGreenway1Layer = 0, int aGreenway2Layer = 0, int aGreenway3Layer = 0, int aBrownwayLayer = 0, int aWetlandLayer = 0) {
 
         waterMaterial = aWaterMaterial;
         roofMaterial = aRoofMaterial;
@@ -356,10 +401,17 @@ public class pLab_OSMReader : MonoBehaviour {
         brownMaterial = aBrownMaterial;
         wetlandMaterial = aWetlandMaterial;
 
-        // API CALL
-        // Example : https://api.openstreetmap.org/api/0.6/map?bbox=11.54,48.14,11.543,48.145
-        // min lon - min lat - max lon -  max lat
-        string apiUrl = "https://api.openstreetmap.org/api/0.6/map?bbox=";
+        waterLayer = aWaterLayer;
+        buildingLayer = aBuildingLayer;
+        // roofLayer = aRoofLayer;
+        // wallLayer = aWallLayer;
+        roadLayer = aRoadLayer;
+        railwayLayer = aRailwayLayer;
+        greenway1Layer = aGreenway1Layer;
+        greenway2Layer = aGreenway2Layer;
+        greenway3Layer = aGreenway3Layer;
+        brownwayLayer = aBrownwayLayer;
+        wetlandLayer = aWetlandLayer;
 
         // TMP VALUES, PLEASE CHANGE THOSEs
         double latBlock = 0.005;
@@ -403,11 +455,21 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="aGreen3Material"></param>
     /// <param name="aBrownMaterial"></param>
     /// <param name="aWetlandMaterial"></param>
+    /// <param name="aWaterLayer">Water layer</param>
+    /// <param name="aBuildingLayer">Building layer</param>
+    /// <param name="aRoadLayer">Road layer</param>
+    /// <param name="aRailwayLayer">Railway layer</param>
+    /// <param name="aGreenway1Layer">Greenway 1 layer</param>
+    /// <param name="aGreenway2Layer">Greenway 2 layer</param>
+    /// <param name="aGreenway3Layer">Greenway 3 layer</param>
+    /// <param name="aBrownwayLayer">Brownway layer</param>
+    /// <param name="aWetlandLayer">Wetland layer</param>
     public void GenerateMapFromFile(string aPath,
         Material aWaterMaterial = null, Material aRoofMaterial = null, Material aWallMaterial = null,
         Material aRoadMaterial = null, Material aRailwayMaterial = null, Material aGreen1Material = null,
         Material aGreen2Material = null, Material aGreen3Material = null, Material aBrownMaterial = null,
-        Material aWetlandMaterial = null) {
+        Material aWetlandMaterial = null, int aWaterLayer = 4, int aBuildingLayer = 0, int aRoadLayer = 0, int aRailwayLayer = 0, 
+        int aGreenway1Layer = 0, int aGreenway2Layer = 0, int aGreenway3Layer = 0, int aBrownwayLayer = 0, int aWetlandLayer = 0) {
 
         waterMaterial = aWaterMaterial;
         roofMaterial = aRoofMaterial;
@@ -420,10 +482,20 @@ public class pLab_OSMReader : MonoBehaviour {
         brownMaterial = aBrownMaterial;
         wetlandMaterial = aWetlandMaterial;
 
-        // TMP VALUES, PLEASE CHANGE THOSEs
-        double latBlock = 0.005;
-        double lonBlock = 0.010;
+        waterLayer = aWaterLayer;
+        buildingLayer = aBuildingLayer;
+        // roofLayer = aRoofLayer;
+        // wallLayer = aWallLayer;
+        roadLayer = aRoadLayer;
+        railwayLayer = aRailwayLayer;
+        greenway1Layer = aGreenway1Layer;
+        greenway2Layer = aGreenway2Layer;
+        greenway3Layer = aGreenway3Layer;
+        brownwayLayer = aBrownwayLayer;
+        wetlandLayer = aWetlandLayer;
 
+        // double latBlock = 0.005;
+        // double lonBlock = 0.010;
 
         string content = File.ReadAllText(aPath);
 
@@ -489,13 +561,19 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="aRequestCount"></param>
     /// <returns></returns>
     IEnumerator GetRequestCoroutine(string aRequest, int aBlockCount, int aRequestCount) {
-        using (WWW www = new WWW(aRequest)) {
-            yield return www;
-            Create(www.text, aBlockCount);
-            readyCounter++;
-            if (readyCounter == aRequestCount) {
-                HandleMultiPoly();
-                finishedGeneratingMap = true;
+        using (UnityWebRequest webRequest = UnityWebRequest.Get(aRequest)) {
+            yield return webRequest.SendWebRequest();
+
+            if (webRequest.isNetworkError || webRequest.isHttpError) {
+                Debug.LogError($"Error requesting map data for blockCount {aBlockCount}: {webRequest.error}");
+            }
+            else {
+                Create(webRequest.downloadHandler.text, aBlockCount);
+                readyCounter++;
+                if (readyCounter == aRequestCount) {
+                    HandleMultiPoly();
+                    finishedGeneratingMap = true;
+                }
             }
         }
     }
@@ -508,8 +586,11 @@ public class pLab_OSMReader : MonoBehaviour {
 #if UNITY_EDITOR //Editor only tag
         string scene = EditorSceneManager.GetActiveScene().name;
         OSMEditorData asset = ScriptableObject.CreateInstance<OSMEditorData>();
-        AssetDatabase.CreateAsset(asset, "Assets/OSMDATA_" + scene + ".asset");
+        string assetPath = "Assets/OSMDATA_" + scene + ".asset";
+        AssetDatabase.CreateAsset(asset, assetPath);
         AssetDatabase.SaveAssets();
+        Debug.Log("Created asset file for VirtualCity scene " + scene + " to " + assetPath);
+        EditorGUIUtility.PingObject(asset);
         return asset;
 #endif
         return null;
@@ -535,8 +616,8 @@ public class pLab_OSMReader : MonoBehaviour {
         XmlNodeList boundsList = doc.GetElementsByTagName("bounds");
         XmlNode boundNode = boundsList[0];
 
-        double xBound = 0;
-        double yBound = 0;
+        // double xBound = 0;
+        // double yBound = 0;
         if(utmX == 0 && utmY == 0)
         pLAB_GeoUtils.LatLongtoUTM(double.Parse(boundNode.Attributes["minlat"].InnerText), double.Parse(boundNode.Attributes["minlon"].InnerText), out utmX, out utmY);
 
@@ -563,20 +644,20 @@ public class pLab_OSMReader : MonoBehaviour {
     /// Calls polygon GameObject creation for each category
     /// </summary>
     public void HandleMultiPoly() {
-        CreateWayObjects("Green1", green1waysObjects, green1ways, green1Material, 8);
-        CreateWayObjects("Green2", green2waysObjects, green2ways, green2Material, 9);
-        CreateWayObjects("Green3", green3waysObjects, green3ways, green3Material, 10);
-        CreateWayObjects("Brown", brownwaysObjects, brownways, brownMaterial, 11);
-        CreateWayObjects("ParkingLot", parkinglotwaysObjects, parkinglotWays, roadMaterial, 12);
-        CreateWayObjects("Water", waterwayObjects, waterways, waterMaterial, 4);
-        CreateWayObjects("Wetland", wetlandwayObjects, wetlandways, wetlandMaterial, 13);
+        CreateWayObjects("Green1", green1waysObjects, green1ways, green1Material, greenway1Layer);
+        CreateWayObjects("Green2", green2waysObjects, green2ways, green2Material, greenway2Layer);
+        CreateWayObjects("Green3", green3waysObjects, green3ways, green3Material, greenway3Layer);
+        CreateWayObjects("Brown", brownwaysObjects, brownways, brownMaterial, brownwayLayer);
+        CreateWayObjects("ParkingLot", parkinglotwaysObjects, parkinglotWays, roadMaterial, roadLayer);
+        CreateWayObjects("Water", waterwayObjects, waterways, waterMaterial, waterLayer);
+        CreateWayObjects("Wetland", wetlandwayObjects, wetlandways, wetlandMaterial, wetlandLayer);
 
-        CreateRelationObjects("Water", waterrelationsObjects, waterrelations, waterMaterial, 4);
-        CreateRelationObjects("Wetland", wetlandrelationsObjects, wetlandrelations, wetlandMaterial, 13);
-        CreateRelationObjects("Green1", green1relationsObjects, green1relations, green1Material, 8);
-        CreateRelationObjects("Green2", green2relationsObjects, green2relations, green2Material, 9);
-        CreateRelationObjects("Green3", green3relationsObjects, green3relations, green3Material, 10);
-        CreateRelationObjects("Brown", brownrelationsObjects, brownrelations, brownMaterial, 11);
+        CreateRelationObjects("Water", waterrelationsObjects, waterrelations, waterMaterial, waterLayer);
+        CreateRelationObjects("Wetland", wetlandrelationsObjects, wetlandrelations, wetlandMaterial, wetlandLayer);
+        CreateRelationObjects("Green1", green1relationsObjects, green1relations, green1Material, greenway1Layer);
+        CreateRelationObjects("Green2", green2relationsObjects, green2relations, green2Material, greenway2Layer);
+        CreateRelationObjects("Green3", green3relationsObjects, green3relations, green3Material, greenway3Layer);
+        CreateRelationObjects("Brown", brownrelationsObjects, brownrelations, brownMaterial, brownwayLayer);
     }
 
     /// <summary>
@@ -608,10 +689,17 @@ public class pLab_OSMReader : MonoBehaviour {
                 Poly2Mesh.CreateGameObject(poly, relationobjects[relationobjects.Count - 1].gameObject);
                 relationobjects[relationobjects.Count - 1].gameObject.GetComponent<MeshRenderer>().material = material;
 
+                //TODO:: Is this supposed to be gameobject. or relationobjects...
                 gameObject.layer = layer;
-
-                MeshCollider meshCollider = gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
-                meshCollider.sharedMesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
+                // relationobjects[relationobjects.Count - 1].gameObject.layer = layer;
+                MeshCollider meshCollider = gameObject.GetComponent<MeshCollider>();
+                if (meshCollider == null) {
+                    meshCollider =  gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
+                }
+                // MeshCollider meshCollider =  gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
+                // MeshCollider meshCollider =  relationobjects[relationobjects.Count - 1].gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
+                meshCollider.sharedMesh =  gameObject.GetComponent<MeshFilter>().sharedMesh;
+                // meshCollider.sharedMesh =  relationobjects[relationobjects.Count - 1].gameObject.GetComponent<MeshFilter>().sharedMesh;
 
                 FixOnTopLayers(gameObject);
 
@@ -684,7 +772,12 @@ public class pLab_OSMReader : MonoBehaviour {
 
                     gameObject.layer = layer;
 
-                    MeshCollider meshCollider = gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
+                    MeshCollider meshCollider = gameObject.GetComponent<MeshCollider>();
+
+                    if (meshCollider == null) {
+                        meshCollider = gameObject.AddComponent<MeshCollider>();
+                    }
+                    // MeshCollider meshCollider = gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
                     meshCollider.sharedMesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
 
                     FixOnTopLayers(gameObject);
@@ -1554,7 +1647,8 @@ public class pLab_OSMReader : MonoBehaviour {
             Poly2Mesh.CreateGameObject(poly, buildingsObjects[i].gameObject);
             buildingsObjects[i].gameObject.AddComponent<BoxCollider>();
 
-            buildingsObjects[i].gameObject.layer = 14;
+            //What layer should be used here, buildingslayer maybe?
+            buildingsObjects[i].gameObject.layer = buildingLayer;
             buildingsObjects[i].gameObject.GetComponent<MeshRenderer>().material = roofMaterial;
             // if there is Building Info with this buildings ID create GameObject with TextMesh over the building for it
             var info = buildingInfos.Find(o => o.WayId == buildings[i].Id);
@@ -1612,7 +1706,9 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="block"></param>
     private void GenerateRoads(string category, List<Way> roads, List<Transform> roadsObjects, GameObject waysParent, List<Node> nodes, double axBound, double ayBound, GameObject block) {
         // Start of Roads
+        Debug.Log("Generating roads");
         for (int i = 0; i < roads.Count; i++) {
+            Debug.Log("Generating roads i " + i);
             roadsObjects.Add(new GameObject(category + "Object" + roads[i].Id).transform);
             roadsObjects[i].gameObject.transform.parent = waysParent.transform;
             LineRenderer lRender = roadsObjects[i].gameObject.AddComponent<LineRenderer>();
@@ -1638,8 +1734,11 @@ public class pLab_OSMReader : MonoBehaviour {
                     break;
             }
 
-            lRender.SetWidth(width, width);
-            lRender.SetVertexCount(roads[i].WayNodeIds.Count);
+            // lRender.SetWidth(width, width);
+            lRender.startWidth = width;
+            lRender.endWidth = width;
+            // lRender.SetVertexCount(roads[i].WayNodeIds.Count);
+            lRender.positionCount = roads[i].WayNodeIds.Count;
 
             for (int j = 0; j < roads[i].WayNodeIds.Count; j++) {
                 foreach (Node nod in nodes) {
@@ -1703,12 +1802,15 @@ public class pLab_OSMReader : MonoBehaviour {
         switch (category) {
             case "road":
                 roadCombineGameObject.gameObject.GetComponent<MeshRenderer>().material = roadMaterial;
+                roadCombineGameObject.gameObject.layer = roadLayer;
                 break;
             case "railway":
                 roadCombineGameObject.gameObject.GetComponent<MeshRenderer>().material = railwayMaterial;
+                roadCombineGameObject.gameObject.layer = railwayLayer;
                 break;
             case "stream":
                 roadCombineGameObject.gameObject.GetComponent<MeshRenderer>().material = waterMaterial;
+                roadCombineGameObject.gameObject.layer = waterLayer;
                 break;
         }
 

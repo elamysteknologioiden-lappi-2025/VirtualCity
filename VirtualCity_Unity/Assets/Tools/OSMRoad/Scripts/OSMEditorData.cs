@@ -39,9 +39,6 @@
  *****************************************************************************/
 
 using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-
 
 public class OSMEditorData : ScriptableObject {
     public Material waterMaterial;
@@ -59,5 +56,28 @@ public class OSMEditorData : ScriptableObject {
     public string minLon;
     public string maxLat;
     public string maxLon;
+
+    [Layer]
+    public int waterLayer = 4;
+    [Layer]
+    public int roadLayer = 0;
+    [Layer]
+    public int railwayLayer = 0;
+    // [Layer]
+    // public int wallLayer = 0;
+    // [Layer]
+    // public int roofLayer = 0;
+    public int buildingLayer = 0;
+    [Layer]
+    public int greenway1Layer = 0;
+    [Layer]
+    public int greenway2Layer = 0;
+    [Layer]
+    public int greenway3Layer = 0;
+    [Layer]
+    public int brownwayLayer = 0;
+    [Layer]
+    public int wetlandLayer = 0;
+
 
 }
