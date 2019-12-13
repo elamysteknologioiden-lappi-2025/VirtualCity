@@ -50,7 +50,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Networking;
-
+using UnityEngine.Profiling;
 
 /// <summary>
 /// Enum for Type (~sub-category / use type)
@@ -184,6 +184,11 @@ public class pLab_OSMReader : MonoBehaviour {
 
     private int wetlandLayer = 0;
 
+    private int UILayer = 5;
+
+    private Color32 buildingInfoTextColor = Color.red;
+
+    private Color32 parkinglotTextColor = Color.blue;
 
     /// <summary>
     /// List of nodes
@@ -338,7 +343,7 @@ public class pLab_OSMReader : MonoBehaviour {
     /// </summary>
     /// <returns></returns>
     public OSMEditorData Open() {
-#if UNITY_EDITOR //Editor only tag
+        #if UNITY_EDITOR //Editor only tag
         string[] assetGuids = AssetDatabase.FindAssets(string.Format("t:{0} {1}", typeof(OSMEditorData).Name, "OSMDATA_" + EditorSceneManager.GetActiveScene().name));
         OSMEditorData asset = null;
         if (assetGuids.Length > 0) {
@@ -352,8 +357,21 @@ public class pLab_OSMReader : MonoBehaviour {
             return null;
         }
         return asset;
-#endif
+        #endif
+
         return null;
+    }
+
+    /// <summary>
+    /// Finds the UI layer and saves it to UILayer-variable
+    /// </summary>
+    private void FindAndInitializeUILayer() {
+        // Find the UI layer
+        int UILayerIndex = LayerMask.NameToLayer("UI");
+
+        if (UILayerIndex != -1) {
+            UILayer = UILayerIndex;
+        }
     }
 
     /// <summary>
@@ -374,8 +392,6 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="aBrownMaterial">Brown material</param>
     /// <param name="aWetlandMaterial">Wetland material</param>
     /// <param name="aWaterLayer">Water layer</param>
-    /// <param name="aRoofLayer">Roof layer</param>
-    /// <param name="aWallLayer">Wall layer</param>
     /// <param name="aRoadLayer">Road layer</param>
     /// <param name="aRailwayLayer">Railway layer</param>
     /// <param name="aGreenway1Layer">Greenway 1 layer</param>
@@ -388,7 +404,8 @@ public class pLab_OSMReader : MonoBehaviour {
         Material aRoadMaterial = null, Material aRailwayMaterial = null, Material aGreen1Material = null,
         Material aGreen2Material = null, Material aGreen3Material = null, Material aBrownMaterial = null,
         Material aWetlandMaterial = null, int aWaterLayer = 4, int aBuildingLayer = 0, int aRoadLayer = 0, int aRailwayLayer = 0, 
-        int aGreenway1Layer = 0, int aGreenway2Layer = 0, int aGreenway3Layer = 0, int aBrownwayLayer = 0, int aWetlandLayer = 0) {
+        int aGreenway1Layer = 0, int aGreenway2Layer = 0, int aGreenway3Layer = 0, int aBrownwayLayer = 0, int aWetlandLayer = 0,
+        Color32? aBuildingInfoTextColor = null, Color32? aParkinglotTextColor = null) {
 
         waterMaterial = aWaterMaterial;
         roofMaterial = aRoofMaterial;
@@ -412,6 +429,12 @@ public class pLab_OSMReader : MonoBehaviour {
         greenway3Layer = aGreenway3Layer;
         brownwayLayer = aBrownwayLayer;
         wetlandLayer = aWetlandLayer;
+
+        buildingInfoTextColor = aBuildingInfoTextColor ?? buildingInfoTextColor;
+
+        parkinglotTextColor = aParkinglotTextColor ?? parkinglotTextColor;
+
+        FindAndInitializeUILayer();
 
         // TMP VALUES, PLEASE CHANGE THOSEs
         double latBlock = 0.005;
@@ -469,7 +492,8 @@ public class pLab_OSMReader : MonoBehaviour {
         Material aRoadMaterial = null, Material aRailwayMaterial = null, Material aGreen1Material = null,
         Material aGreen2Material = null, Material aGreen3Material = null, Material aBrownMaterial = null,
         Material aWetlandMaterial = null, int aWaterLayer = 4, int aBuildingLayer = 0, int aRoadLayer = 0, int aRailwayLayer = 0, 
-        int aGreenway1Layer = 0, int aGreenway2Layer = 0, int aGreenway3Layer = 0, int aBrownwayLayer = 0, int aWetlandLayer = 0) {
+        int aGreenway1Layer = 0, int aGreenway2Layer = 0, int aGreenway3Layer = 0, int aBrownwayLayer = 0, int aWetlandLayer = 0,
+        Color32? aBuildingInfoTextColor = null, Color32? aParkinglotTextColor = null) {
 
         waterMaterial = aWaterMaterial;
         roofMaterial = aRoofMaterial;
@@ -493,6 +517,12 @@ public class pLab_OSMReader : MonoBehaviour {
         greenway3Layer = aGreenway3Layer;
         brownwayLayer = aBrownwayLayer;
         wetlandLayer = aWetlandLayer;
+
+        buildingInfoTextColor = aBuildingInfoTextColor ?? buildingInfoTextColor;
+
+        parkinglotTextColor = aParkinglotTextColor ?? parkinglotTextColor;
+
+        FindAndInitializeUILayer();
 
         // double latBlock = 0.005;
         // double lonBlock = 0.010;
@@ -619,7 +649,7 @@ public class pLab_OSMReader : MonoBehaviour {
         // double xBound = 0;
         // double yBound = 0;
         if(utmX == 0 && utmY == 0)
-        pLAB_GeoUtils.LatLongtoUTM(double.Parse(boundNode.Attributes["minlat"].InnerText), double.Parse(boundNode.Attributes["minlon"].InnerText), out utmX, out utmY);
+            pLAB_GeoUtils.LatLongtoUTM(double.Parse(boundNode.Attributes["minlat"].InnerText), double.Parse(boundNode.Attributes["minlon"].InnerText), out utmX, out utmY);
 
         utmX = utmX - UTMN_Zero;
         utmY = utmY - UTME_Zero;
@@ -628,6 +658,7 @@ public class pLab_OSMReader : MonoBehaviour {
             // GameObject.Find("GeoMap").GetComponent<pLab_GeoMap>().UtmX = utmY;
             // GameObject.Find("GeoMap").GetComponent<pLab_GeoMap>().UtmY = utmX;
         }
+
         foreach (XmlNode attr in elementList) {
             double UTMN = 0;
             double UTME = 0;
@@ -690,16 +721,14 @@ public class pLab_OSMReader : MonoBehaviour {
                 relationobjects[relationobjects.Count - 1].gameObject.GetComponent<MeshRenderer>().material = material;
 
                 //TODO:: Is this supposed to be gameobject. or relationobjects...
+                GameObject gameObject = relationobjects[relationobjects.Count - 1].gameObject;
+
                 gameObject.layer = layer;
-                // relationobjects[relationobjects.Count - 1].gameObject.layer = layer;
                 MeshCollider meshCollider = gameObject.GetComponent<MeshCollider>();
                 if (meshCollider == null) {
                     meshCollider =  gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
                 }
-                // MeshCollider meshCollider =  gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
-                // MeshCollider meshCollider =  relationobjects[relationobjects.Count - 1].gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
                 meshCollider.sharedMesh =  gameObject.GetComponent<MeshFilter>().sharedMesh;
-                // meshCollider.sharedMesh =  relationobjects[relationobjects.Count - 1].gameObject.GetComponent<MeshFilter>().sharedMesh;
 
                 FixOnTopLayers(gameObject);
 
@@ -777,7 +806,6 @@ public class pLab_OSMReader : MonoBehaviour {
                     if (meshCollider == null) {
                         meshCollider = gameObject.AddComponent<MeshCollider>();
                     }
-                    // MeshCollider meshCollider = gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
                     meshCollider.sharedMesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
 
                     FixOnTopLayers(gameObject);
@@ -931,6 +959,8 @@ public class pLab_OSMReader : MonoBehaviour {
                         model = GameObject.Instantiate(Resources.Load(type)) as GameObject;
                     } catch {
                         Debug.Log("Failed to instatiate " + gameObject.name + " " + type);
+                        //Model is null so just jump to the next loop iteration
+                        continue;
                     }
 
                     model.transform.position = new Vector3(X + plusX, gameObject.transform.position.y + 0.3f, Y + plusY);
@@ -1643,6 +1673,7 @@ public class pLab_OSMReader : MonoBehaviour {
             wall.gameObject.GetComponent<MeshFilter>().sharedMesh = mshWall;
             wall.gameObject.GetComponent<MeshRenderer>().material = wallMaterial;
             wall.gameObject.GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
+            wall.gameObject.layer = buildingLayer;
                             poly.CalcPlaneNormal(Vector3.up);
             Poly2Mesh.CreateGameObject(poly, buildingsObjects[i].gameObject);
             buildingsObjects[i].gameObject.AddComponent<BoxCollider>();
@@ -1672,13 +1703,14 @@ public class pLab_OSMReader : MonoBehaviour {
 
         text.text = info.Info;
 
-        text.color = Color.red;
+        text.color = buildingInfoTextColor;
         text.fontSize = 30;
 
         infoObject.transform.position = buildingsObject.gameObject.GetComponent<BoxCollider>().bounds.center + new Vector3(0, 10, 0);
 
         infoObject.transform.parent = buildingsObject.gameObject.transform;
         infoObject.name = buildingsObject.gameObject.name + "_info";
+        infoObject.layer = UILayer;
 
         buildingInfoObjects.Add(infoObject);
 
@@ -1706,9 +1738,7 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="block"></param>
     private void GenerateRoads(string category, List<Way> roads, List<Transform> roadsObjects, GameObject waysParent, List<Node> nodes, double axBound, double ayBound, GameObject block) {
         // Start of Roads
-        Debug.Log("Generating roads");
         for (int i = 0; i < roads.Count; i++) {
-            Debug.Log("Generating roads i " + i);
             roadsObjects.Add(new GameObject(category + "Object" + roads[i].Id).transform);
             roadsObjects[i].gameObject.transform.parent = waysParent.transform;
             LineRenderer lRender = roadsObjects[i].gameObject.AddComponent<LineRenderer>();
@@ -1885,10 +1915,12 @@ public class pLab_OSMReader : MonoBehaviour {
 
                     text.text = "P";
                     text.fontSize = 30;
-                    text.color = Color.blue;
+                    text.color = parkinglotTextColor;
                     z = 0.1f;
 
-                    model.transform.RotateAroundLocal(Vector3.right, (float)Math.PI / 2);
+                    // model.transform.RotateAroundLocal(Vector3.right, (float)Math.PI / 2);
+                    model.transform.Rotate(Vector3.right, (float) Math.PI / 2 * Mathf.Rad2Deg, Space.World);
+                    model.layer = UILayer;
                 } else {
                     model = GameObject.Instantiate(Resources.Load(modelType)) as GameObject;
                 }

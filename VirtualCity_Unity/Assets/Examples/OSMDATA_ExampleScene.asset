@@ -22,7 +22,6 @@ MonoBehaviour:
   green3Material: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
   brownMaterial: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
   wetlandMaterial: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
-  osmDataFile: 
   minLat: 66.7002000
   minLon: 27.4047000
   maxLat: 66.7177000
@@ -36,3 +35,9 @@ MonoBehaviour:
   greenway3Layer: 13
   brownwayLayer: 14
   wetlandLayer: 15
+  buildingInfoTextColor:
+    serializedVersion: 2
+    rgba: 4283191295
+  parkingLotTextColor:
+    serializedVersion: 2
+    rgba: 4294946048
