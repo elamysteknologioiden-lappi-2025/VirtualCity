@@ -37,7 +37,7 @@ MonoBehaviour:
   wetlandLayer: 15
   buildingInfoTextColor:
     serializedVersion: 2
-    rgba: 4283191295
+    rgba: 4283170701
   parkingLotTextColor:
     serializedVersion: 2
-    rgba: 4294946048
+    rgba: 4294949937

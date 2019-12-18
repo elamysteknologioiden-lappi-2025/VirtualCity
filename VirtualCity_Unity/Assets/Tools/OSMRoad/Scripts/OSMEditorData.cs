@@ -41,6 +41,13 @@
 using UnityEngine;
 
 public class OSMEditorData : ScriptableObject {
+
+    [Header("Area Coordinates")]
+    public string minLat;
+    public string minLon;
+    public string maxLat;
+    public string maxLon;
+
     [Header("Materials")]
     public Material waterMaterial;
     public Material roadMaterial;
@@ -53,12 +60,6 @@ public class OSMEditorData : ScriptableObject {
     public Material brownMaterial;
     public Material wetlandMaterial;
     // public string osmDataFile;
-
-    [Header("Area Coordinates")]
-    public string minLat;
-    public string minLon;
-    public string maxLat;
-    public string maxLon;
 
     [Header("Layers")]
 

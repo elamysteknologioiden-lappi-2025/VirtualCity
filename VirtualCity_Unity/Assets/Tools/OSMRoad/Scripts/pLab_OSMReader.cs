@@ -654,10 +654,13 @@ public class pLab_OSMReader : MonoBehaviour {
         utmX = utmX - UTMN_Zero;
         utmY = utmY - UTME_Zero;
 
-        if (GameObject.Find("GeoMap")) {
-            // GameObject.Find("GeoMap").GetComponent<pLab_GeoMap>().UtmX = utmY;
-            // GameObject.Find("GeoMap").GetComponent<pLab_GeoMap>().UtmY = utmX;
-        }
+        Debug.LogFormat("Min Lat UTM (UTMX): {0}, Min Lon UTM (UTMY): {1}", utmX, utmY);
+        // pLab_GeoMap geoMap = GameObject.FindObjectOfType<pLab_GeoMap>();
+        
+        // if (geoMap != null) {
+        //     geoMap.UtmX = utmY;
+        //     geoMap.UtmY = utmX;
+        // }
 
         foreach (XmlNode attr in elementList) {
             double UTMN = 0;
@@ -675,20 +678,62 @@ public class pLab_OSMReader : MonoBehaviour {
     /// Calls polygon GameObject creation for each category
     /// </summary>
     public void HandleMultiPoly() {
-        CreateWayObjects("Green1", green1waysObjects, green1ways, green1Material, greenway1Layer);
-        CreateWayObjects("Green2", green2waysObjects, green2ways, green2Material, greenway2Layer);
-        CreateWayObjects("Green3", green3waysObjects, green3ways, green3Material, greenway3Layer);
-        CreateWayObjects("Brown", brownwaysObjects, brownways, brownMaterial, brownwayLayer);
-        CreateWayObjects("ParkingLot", parkinglotwaysObjects, parkinglotWays, roadMaterial, roadLayer);
-        CreateWayObjects("Water", waterwayObjects, waterways, waterMaterial, waterLayer);
-        CreateWayObjects("Wetland", wetlandwayObjects, wetlandways, wetlandMaterial, wetlandLayer);
+        Transform wayObjectsParent = new GameObject("Wayobjects").transform;
 
-        CreateRelationObjects("Water", waterrelationsObjects, waterrelations, waterMaterial, waterLayer);
-        CreateRelationObjects("Wetland", wetlandrelationsObjects, wetlandrelations, wetlandMaterial, wetlandLayer);
-        CreateRelationObjects("Green1", green1relationsObjects, green1relations, green1Material, greenway1Layer);
-        CreateRelationObjects("Green2", green2relationsObjects, green2relations, green2Material, greenway2Layer);
-        CreateRelationObjects("Green3", green3relationsObjects, green3relations, green3Material, greenway3Layer);
-        CreateRelationObjects("Brown", brownrelationsObjects, brownrelations, brownMaterial, brownwayLayer);
+        Transform greenway1ObjectParent = new GameObject("Greenway1Objects").transform;
+        greenway1ObjectParent.transform.SetParent(wayObjectsParent, wayObjectsParent);
+        CreateWayObjects("Green1", green1waysObjects, green1ways, green1Material, greenway1Layer, greenway1ObjectParent);
+
+        Transform greenway2ObjectParent = new GameObject("Greenway2Objects").transform;
+        greenway2ObjectParent.transform.SetParent(wayObjectsParent);
+        CreateWayObjects("Green2", green2waysObjects, green2ways, green2Material, greenway2Layer, greenway2ObjectParent);
+        
+        Transform greenway3ObjectParent = new GameObject("Greenway3Objects").transform;
+        greenway3ObjectParent.transform.SetParent(wayObjectsParent);
+        CreateWayObjects("Green3", green3waysObjects, green3ways, green3Material, greenway3Layer, greenway3ObjectParent);
+        
+        Transform brownwayObjectParent = new GameObject("BrownwayObjects").transform;
+        brownwayObjectParent.transform.SetParent(wayObjectsParent);
+        CreateWayObjects("Brown", brownwaysObjects, brownways, brownMaterial, brownwayLayer, brownwayObjectParent);
+        
+        Transform parkinglotsObjectParent = new GameObject("ParkinglotsObjects").transform;
+        parkinglotsObjectParent.transform.SetParent(wayObjectsParent);
+        CreateWayObjects("ParkingLot", parkinglotwaysObjects, parkinglotWays, roadMaterial, roadLayer, parkinglotsObjectParent);
+        
+        Transform waterwayObjectParent = new GameObject("WaterwayObjects").transform;
+        waterwayObjectParent.transform.SetParent(wayObjectsParent);
+        CreateWayObjects("Water", waterwayObjects, waterways, waterMaterial, waterLayer, waterwayObjectParent);
+        
+        Transform wetlandObjectParent = new GameObject("WetlandObjects").transform;
+        wetlandObjectParent.transform.SetParent(wayObjectsParent);
+        CreateWayObjects("Wetland", wetlandwayObjects, wetlandways, wetlandMaterial, wetlandLayer, wetlandObjectParent);
+        
+        Transform relationObjectsParent = new GameObject("RelationObjects").transform;
+
+        Transform waterRelationsObjectParent = new GameObject("WaterRelations").transform;
+        waterRelationsObjectParent.SetParent(relationObjectsParent);
+        CreateRelationObjects("Water", waterrelationsObjects, waterrelations, waterMaterial, waterLayer, waterRelationsObjectParent.transform);
+
+        Transform wetlandRelationsObjectParent = new GameObject("WetlandRelations").transform;
+        wetlandRelationsObjectParent.SetParent(relationObjectsParent);
+        CreateRelationObjects("Wetland", wetlandrelationsObjects, wetlandrelations, wetlandMaterial, wetlandLayer, wetlandRelationsObjectParent.transform);
+
+        Transform green1RelationsObjectParent = new GameObject("Green1Relations").transform;
+        green1RelationsObjectParent.SetParent(relationObjectsParent);
+        CreateRelationObjects("Green1", green1relationsObjects, green1relations, green1Material, greenway1Layer, green1RelationsObjectParent.transform);
+
+        Transform green2RelationsObjectParent = new GameObject("Green2Relations").transform;
+        green2RelationsObjectParent.SetParent(relationObjectsParent);
+        CreateRelationObjects("Green2", green2relationsObjects, green2relations, green2Material, greenway2Layer, green2RelationsObjectParent.transform);
+
+        Transform green3RelationsObjectParent = new GameObject("Green3Relations").transform;
+        green3RelationsObjectParent.SetParent(relationObjectsParent);
+        CreateRelationObjects("Green3", green3relationsObjects, green3relations, green3Material, greenway3Layer, green3RelationsObjectParent.transform);
+
+        Transform brownRelationsObjectParent = new GameObject("BrownRelations").transform;
+        brownRelationsObjectParent.SetParent(relationObjectsParent);
+        CreateRelationObjects("Brown", brownrelationsObjects, brownrelations, brownMaterial, brownwayLayer, brownRelationsObjectParent.transform);
+
     }
 
     /// <summary>
@@ -699,11 +744,18 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="relations">List of relations that contains the data to create the GameObjects</param>
     /// <param name="material">The material to be set for the created GameObjects mesh</param>
     /// <param name="layer">The # of the layer of the category</param>
-    private void CreateRelationObjects(string category, List<Transform> relationobjects, List<Relation> relations, Material material, int layer) {
+    /// <param name="parentObject">Parent object (transform). New object will be created as a child of this transform.</param>
+    private void CreateRelationObjects(string category, List<Transform> relationobjects, List<Relation> relations, Material material, int layer, Transform parentObject = null) {
         relationobjects.Clear();
         for (int i = 0; i < relations.Count; i++) {
             Poly2Mesh.Polygon poly = new Poly2Mesh.Polygon();
-            relationobjects.Add(new GameObject(category + "Relations" + relations[i].Id).transform);
+            GameObject go = new GameObject(category + "Relations" + relations[i].Id);
+
+            if (parentObject != null) {
+                go.transform.SetParent(parentObject);
+            }
+
+            relationobjects.Add(go.transform);
 
 
             poly.outside = relations[i].OuterVectors;
@@ -720,7 +772,6 @@ public class pLab_OSMReader : MonoBehaviour {
                 Poly2Mesh.CreateGameObject(poly, relationobjects[relationobjects.Count - 1].gameObject);
                 relationobjects[relationobjects.Count - 1].gameObject.GetComponent<MeshRenderer>().material = material;
 
-                //TODO:: Is this supposed to be gameobject. or relationobjects...
                 GameObject gameObject = relationobjects[relationobjects.Count - 1].gameObject;
 
                 gameObject.layer = layer;
@@ -734,15 +785,15 @@ public class pLab_OSMReader : MonoBehaviour {
 
                 switch (relations[i].CategoryType) {
                     case ((int)CategoryType.EForest):
-                        PlaceObjects("tree", 10, gameObject, 15, true, 4);
+                        PlaceObjects("tree", 10, gameObject, 15, true, 4, layer);
                         break;
 
                     case ((int)CategoryType.ECemetery):
-                        PlaceObjects("tombstones", 2, gameObject, 15, false, 0);
+                        PlaceObjects("tombstones", 2, gameObject, 15, false, 0, layer);
                         break;
 
                     case ((int)CategoryType.EScrub):
-                        PlaceObjects("bush", 3, gameObject, 6, true, 2);
+                        PlaceObjects("bush", 3, gameObject, 6, true, 2, layer);
                         break;
                 }
             }
@@ -757,7 +808,8 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="ways">List of ways that contains the data to create the GameObjects</param>
     /// <param name="material">The material to be set for the created GameObjects mesh</param>
     /// <param name="layer">The # of the layer of the category</param>
-    private void CreateWayObjects(string category, List<Transform> wayobjects, List<Way> ways, Material material, int layer) {
+    /// <param name="parentObject">Parent object (transform). New object will be created as a child of this transform.</param>
+    private void CreateWayObjects(string category, List<Transform> wayobjects, List<Way> ways, Material material, int layer, Transform parentObject = null) {
         wayobjects.Clear();
         for (int i = 0; i < ways.Count; i++) {
             List<Vector3> tempVectors = new List<Vector3>();
@@ -767,7 +819,13 @@ public class pLab_OSMReader : MonoBehaviour {
             if (waylists.Find(a => a.WayId == ways[i].Id) != null && waylists.Find(a => a.WayId == ways[i].Id).Filled == false) {
                 waylists.Find(a => a.WayId == ways[i].Id).Filled = true;
                 Poly2Mesh.Polygon poly = new Poly2Mesh.Polygon();
-                wayobjects.Add(new GameObject(category + "Ways" + ways[i].Id).transform);
+                GameObject go = new GameObject(category + "Ways" + ways[i].Id);
+
+                if (parentObject != null) {
+                    go.transform.SetParent(parentObject);
+                }
+
+                wayobjects.Add(go.transform);
 
                 var list = ways[i].WayNodeIds.Distinct();
 
@@ -812,15 +870,15 @@ public class pLab_OSMReader : MonoBehaviour {
 
                     switch (ways[i].CategoryType) {
                         case ((int)CategoryType.EForest):
-                            PlaceObjects("tree", 10, gameObject, 15, true, 4);
+                            PlaceObjects("tree", 10, gameObject, 15, true, 4, layer);
                             break;
 
                         case ((int)CategoryType.ECemetery):
-                            PlaceObjects("tombstones", 2, gameObject, 15, false, 0);
+                            PlaceObjects("tombstones", 2, gameObject, 15, false, 0, layer);
                             break;
 
                         case ((int)CategoryType.EScrub):
-                            PlaceObjects("bush", 3, gameObject, 6, true, 2);
+                            PlaceObjects("bush", 3, gameObject, 6, true, 2, layer);
                             break;
                     }
                 }
@@ -920,14 +978,15 @@ public class pLab_OSMReader : MonoBehaviour {
     /// </summary>
     /// <param name="modelType" >The type of object to place eg.: tree</param>
     /// <param name="modelsCount">The number of different models of the type</param>
-    /// <param name="gameObject">The GameObject of the area to place objects on</param>
+    /// <param name="go">The GameObject of the area to place objects on</param>
     /// <param name="step">The base distance of an iteration while placing objects (recommended ~15 for trees, ~6 for bushes)</param>
     /// <param name="distance">The max/min random value that is added to or subtracted from position to provide randomness. Set to 0 if method is called with randomGap = false.</param>
     /// <param name="randomGap">Create randomness in the gaps between objects. Set the min/max random distance in the "distance" parameter</param>
-    private void PlaceObjects(string modelType, int modelsCount, GameObject gameObject, float step, bool randomGap, float distance) {
-        var meshCollider = gameObject.GetComponent<MeshCollider>();
+    /// <param name="parentLayer">Parent's layer. Object will be placed on this layer also</param>
+    private void PlaceObjects(string modelType, int modelsCount, GameObject go, float step, bool randomGap, float distance, int parentLayer) {
+        MeshCollider meshCollider = go.GetComponent<MeshCollider>();
 
-        var box = meshCollider.bounds;
+        Bounds box = meshCollider.bounds;
 
         modelsCount += 1;
 
@@ -941,11 +1000,11 @@ public class pLab_OSMReader : MonoBehaviour {
                     plusY = 0;
                 }
 
-                var point = new Vector3(X + plusX, 30, Y + plusY);
+                Vector3 point = new Vector3(X + plusX, 30, Y + plusY);
 
-                var ray = new Ray(point, Vector3.down);
+                Ray ray = new Ray(point, Vector3.down);
 
-                var rayHit = new RaycastHit();
+                RaycastHit rayHit = new RaycastHit();
 
                 if (meshCollider.Raycast(ray, out rayHit, Mathf.Infinity)) {
 
@@ -958,15 +1017,16 @@ public class pLab_OSMReader : MonoBehaviour {
                     try {
                         model = GameObject.Instantiate(Resources.Load(type)) as GameObject;
                     } catch {
-                        Debug.Log("Failed to instatiate " + gameObject.name + " " + type);
+                        Debug.Log("Failed to instatiate " + go.name + " " + type);
                         //Model is null so just jump to the next loop iteration
                         continue;
                     }
 
-                    model.transform.position = new Vector3(X + plusX, gameObject.transform.position.y + 0.3f, Y + plusY);
-                    model.name = gameObject.name + type;
+                    model.transform.position = new Vector3(X + plusX, go.transform.position.y + 0.3f, Y + plusY);
+                    model.name = go.name + type;
+                    model.layer = parentLayer;
 
-                    model.transform.parent = gameObject.transform;
+                    model.transform.parent = go.transform;
 
                     // if model collides with other objects eg.buildings, delete model
 
