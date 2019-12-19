@@ -343,23 +343,23 @@ public class pLab_OSMReader : MonoBehaviour {
     /// </summary>
     /// <returns></returns>
     public OSMEditorData Open() {
+        OSMEditorData asset = null;
+
         #if UNITY_EDITOR //Editor only tag
         string[] assetGuids = AssetDatabase.FindAssets(string.Format("t:{0} {1}", typeof(OSMEditorData).Name, "OSMDATA_" + EditorSceneManager.GetActiveScene().name));
-        OSMEditorData asset = null;
         if (assetGuids.Length > 0) {
             asset = (OSMEditorData) AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(assetGuids[0]), typeof(OSMEditorData));
         }
         // OSMEditorData asset = AssetDatabase.LoadAssetAtPath("Assets/OSMDATA_" + EditorSceneManager.GetActiveScene().name + ".asset", typeof(OSMEditorData)) as OSMEditorData;
         if (asset == null) {
-            asset = Create();
+            asset = CreateEditorData();
         }
         if (asset == null) {
             return null;
         }
-        return asset;
         #endif
 
-        return null;
+        return asset;
     }
 
     /// <summary>
@@ -462,6 +462,7 @@ public class pLab_OSMReader : MonoBehaviour {
                 blockCount++;
             }
         }
+
     }
 
     /// <summary>
@@ -532,8 +533,6 @@ public class pLab_OSMReader : MonoBehaviour {
         List<Node> nodes = new List<Node>();
         doc.LoadXml(content);
 
-       //Debug.LogError(content);
-
         XmlNodeList elementList = doc.GetElementsByTagName("node");
         XmlNodeList boundsList = doc.GetElementsByTagName("bounds");
 
@@ -563,14 +562,12 @@ public class pLab_OSMReader : MonoBehaviour {
             pLAB_GeoUtils.LatLongtoUTM(minLat, minLon, out UTMN_Zero, out UTME_Zero);
         }
 
-
-
-
-
         Create(content, 1, UTMN_Zero, UTME_Zero);
 
         HandleMultiPoly();
         finishedGeneratingMap = true;
+        ClearLists();
+        EditorUtility.UnloadUnusedAssetsImmediate();
     }
 
         /// <summary>
@@ -579,7 +576,7 @@ public class pLab_OSMReader : MonoBehaviour {
         /// <param name="aRequest"></param>
         /// <param name="aBlockCount"></param>
         /// <param name="aRequestCount"></param>
-        public void GetRequest(string aRequest, int aBlockCount, int aRequestCount) {
+    public void GetRequest(string aRequest, int aBlockCount, int aRequestCount) {
         StartCoroutine(GetRequestCoroutine(aRequest, aBlockCount, aRequestCount));
     }
 
@@ -603,6 +600,8 @@ public class pLab_OSMReader : MonoBehaviour {
                 if (readyCounter == aRequestCount) {
                     HandleMultiPoly();
                     finishedGeneratingMap = true;
+                    ClearLists();
+                    EditorUtility.UnloadUnusedAssetsImmediate();
                 }
             }
         }
@@ -612,18 +611,20 @@ public class pLab_OSMReader : MonoBehaviour {
     /// Create  and save OSMEditorData  
     /// </summary>
     /// <returns></returns>
-    public OSMEditorData Create() {
-#if UNITY_EDITOR //Editor only tag
+    public OSMEditorData CreateEditorData() {
+        OSMEditorData asset = null;
+
+        #if UNITY_EDITOR //Editor only tag
         string scene = EditorSceneManager.GetActiveScene().name;
-        OSMEditorData asset = ScriptableObject.CreateInstance<OSMEditorData>();
+        asset = ScriptableObject.CreateInstance<OSMEditorData>();
         string assetPath = "Assets/OSMDATA_" + scene + ".asset";
         AssetDatabase.CreateAsset(asset, assetPath);
         AssetDatabase.SaveAssets();
         Debug.Log("Created asset file for VirtualCity scene " + scene + " to " + assetPath);
         EditorGUIUtility.PingObject(asset);
+        #endif
+
         return asset;
-#endif
-        return null;
     }
 
     /// <summary>
@@ -648,13 +649,14 @@ public class pLab_OSMReader : MonoBehaviour {
 
         // double xBound = 0;
         // double yBound = 0;
-        if(utmX == 0 && utmY == 0)
+        if(utmX == 0 && utmY == 0) {
             pLAB_GeoUtils.LatLongtoUTM(double.Parse(boundNode.Attributes["minlat"].InnerText), double.Parse(boundNode.Attributes["minlon"].InnerText), out utmX, out utmY);
+        }
 
         utmX = utmX - UTMN_Zero;
         utmY = utmY - UTME_Zero;
 
-        Debug.LogFormat("Min Lat UTM (UTMX): {0}, Min Lon UTM (UTMY): {1}", utmX, utmY);
+        // Debug.LogFormat("Min Lat UTM (UTMX): {0}, Min Lon UTM (UTMY): {1}", utmX, utmY);
         // pLab_GeoMap geoMap = GameObject.FindObjectOfType<pLab_GeoMap>();
         
         // if (geoMap != null) {
@@ -769,31 +771,27 @@ public class pLab_OSMReader : MonoBehaviour {
 
 
             if (relations[i].OuterVectors.Count > 0) {
-                Poly2Mesh.CreateGameObject(poly, relationobjects[relationobjects.Count - 1].gameObject);
-                relationobjects[relationobjects.Count - 1].gameObject.GetComponent<MeshRenderer>().material = material;
+                Poly2Mesh.CreateGameObject(poly, go);
+                go.GetComponent<MeshRenderer>().sharedMaterial = material;
 
-                GameObject gameObject = relationobjects[relationobjects.Count - 1].gameObject;
 
-                gameObject.layer = layer;
-                MeshCollider meshCollider = gameObject.GetComponent<MeshCollider>();
-                if (meshCollider == null) {
-                    meshCollider =  gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
-                }
-                meshCollider.sharedMesh =  gameObject.GetComponent<MeshFilter>().sharedMesh;
+                go.layer = layer;
+                MeshCollider meshCollider = go.AddComponent<MeshCollider>();
+                meshCollider.sharedMesh = go.GetComponent<MeshFilter>().sharedMesh;
 
-                FixOnTopLayers(gameObject);
+                FixOnTopLayers(go);
 
                 switch (relations[i].CategoryType) {
                     case ((int)CategoryType.EForest):
-                        PlaceObjects("tree", 10, gameObject, 15, true, 4, layer);
+                        PlaceObjects("tree", 10, go, 15, true, 4, layer);
                         break;
 
                     case ((int)CategoryType.ECemetery):
-                        PlaceObjects("tombstones", 2, gameObject, 15, false, 0, layer);
+                        PlaceObjects("tombstones", 2, go, 15, false, 0, layer);
                         break;
 
                     case ((int)CategoryType.EScrub):
-                        PlaceObjects("bush", 3, gameObject, 6, true, 2, layer);
+                        PlaceObjects("bush", 3, go, 6, true, 2, layer);
                         break;
                 }
             }
@@ -813,11 +811,17 @@ public class pLab_OSMReader : MonoBehaviour {
         wayobjects.Clear();
         for (int i = 0; i < ways.Count; i++) {
             List<Vector3> tempVectors = new List<Vector3>();
+            
+            WayList tmpWaylist = waylists.Find(a => a.WayId == ways[i].Id);
 
-            if (waylists.Find(a => a.WayId == ways[i].Id) == null) waylists.Add(new WayList(ways[i].Id));
+            //If the waylist was not on the list, add it
+            if (tmpWaylist == null) {
+                tmpWaylist = new WayList(ways[i].Id);
+                waylists.Add(tmpWaylist);
+            }
 
-            if (waylists.Find(a => a.WayId == ways[i].Id) != null && waylists.Find(a => a.WayId == ways[i].Id).Filled == false) {
-                waylists.Find(a => a.WayId == ways[i].Id).Filled = true;
+            if (tmpWaylist != null && !tmpWaylist.Filled) {
+                tmpWaylist.Filled = true;
                 Poly2Mesh.Polygon poly = new Poly2Mesh.Polygon();
                 GameObject go = new GameObject(category + "Ways" + ways[i].Id);
 
@@ -853,17 +857,13 @@ public class pLab_OSMReader : MonoBehaviour {
 
 
                 if (tempVectors.Count > 0) {
-                    GameObject gameObject = Poly2Mesh.CreateGameObject(poly, wayobjects[wayobjects.Count - 1].gameObject);
+                    GameObject gameObject = Poly2Mesh.CreateGameObject(poly, go);
 
-                    wayobjects[wayobjects.Count - 1].gameObject.GetComponent<MeshRenderer>().material = material;
+                    go.GetComponent<MeshRenderer>().sharedMaterial = material;
 
                     gameObject.layer = layer;
 
-                    MeshCollider meshCollider = gameObject.GetComponent<MeshCollider>();
-
-                    if (meshCollider == null) {
-                        meshCollider = gameObject.AddComponent<MeshCollider>();
-                    }
+                    MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
                     meshCollider.sharedMesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
 
                     FixOnTopLayers(gameObject);
@@ -893,12 +893,13 @@ public class pLab_OSMReader : MonoBehaviour {
     private void FixOnTopLayers(GameObject gameObject) {
 
         List<RaycastHit> hits = new List<RaycastHit>();
+        RaycastHit[] hits2;
 
         var bounds = gameObject.GetComponent<MeshCollider>().bounds;
 
         for (float i = bounds.min.x; i < bounds.max.x; i += 15) {
             for (float j = bounds.min.z; j < bounds.max.z; j++) {
-                RaycastHit[] hits2 = Physics.RaycastAll(new Ray(new Vector3(i, 3.9f, j), Vector3.down));
+                hits2 = Physics.RaycastAll(new Ray(new Vector3(i, 3.9f, j), Vector3.down));
                 for (int ii = 0; ii < hits2.Length; ii++) {
                     hits.Add(hits2[ii]);
                 }
@@ -965,8 +966,8 @@ public class pLab_OSMReader : MonoBehaviour {
                             gObjhit.transform.position += new Vector3(0, -0.1f, 0);
                             alreadyMovedObjects.Add(gObjhit.transform);
                         }
-                        if (hitmoved) {
-                        }
+                        // if (hitmoved) {
+                        // }
                     }
                 }
             }
@@ -989,6 +990,9 @@ public class pLab_OSMReader : MonoBehaviour {
         Bounds box = meshCollider.bounds;
 
         modelsCount += 1;
+        RaycastHit rayHit;
+        RaycastHit rayHit2;
+        List<RaycastHit> hits;
 
         for (float X = box.min.x; X < box.max.x; X = X + step) {
             for (float Y = box.min.z; Y < box.max.z; Y = Y + step) {
@@ -1003,8 +1007,6 @@ public class pLab_OSMReader : MonoBehaviour {
                 Vector3 point = new Vector3(X + plusX, 30, Y + plusY);
 
                 Ray ray = new Ray(point, Vector3.down);
-
-                RaycastHit rayHit = new RaycastHit();
 
                 if (meshCollider.Raycast(ray, out rayHit, Mathf.Infinity)) {
 
@@ -1030,8 +1032,6 @@ public class pLab_OSMReader : MonoBehaviour {
 
                     // if model collides with other objects eg.buildings, delete model
 
-                    List<RaycastHit> hits = new List<RaycastHit>();
-
                     hits = Physics.RaycastAll(ray, 50).ToList();
 
                     // the first it is somehow always hits "Plane" object, so Plane hits from List
@@ -1040,9 +1040,9 @@ public class pLab_OSMReader : MonoBehaviour {
                     int index = 100;
 
                     for (int i = 0; i < hits.Count; i++) {
-                        RaycastHit hit = hits[i];
+                        rayHit2 = hits[i];
 
-                        if (hit.collider.gameObject.layer == meshCollider.gameObject.layer) {
+                        if (rayHit2.collider.gameObject.layer == meshCollider.gameObject.layer) {
                             index = i;
                         }
                     }
@@ -1050,27 +1050,6 @@ public class pLab_OSMReader : MonoBehaviour {
                     //if the gameObject attached to the first collider hit by the ray is not the same layer as we want, delete model
 
                     if (index != 0) DestroyImmediate(model);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// The regular update method of a MonoBehaviour class
-    /// </summary>
-    public void Update() {
-
-
-        // if the whole map is generated make Building infos constantly look at MainCamera
-        if (finishedGeneratingMap) {
-            var cam = Camera.main;
-
-            if (cam != null) {
-
-                foreach (var item in buildingInfoObjects) {
-                    item.transform.LookAt(cam.transform);
-
-                    item.transform.rotation = Quaternion.LookRotation(item.transform.position - cam.transform.position);
                 }
             }
         }
@@ -1119,129 +1098,134 @@ public class pLab_OSMReader : MonoBehaviour {
             // innertype = holes
             XmlNodeList relationNodes = node.ChildNodes;
 
-            Relation tmpRelation = waterrelations.Find(x => x.Id == int.Parse(node.Attributes["id"].InnerText));
+            int tmpRelationId = int.Parse(node.Attributes["id"].InnerText);
+
+            Relation tmpRelation = waterrelations.Find(x => x.Id == tmpRelationId);
 
             bool updateRelation = true;
+
             if (null != tmpRelation) {
                 tmpRelation.Updated = true;
             }
-
-            if (null == tmpRelation) {
+            else if (null == tmpRelation) {
                 updateRelation = false;
-                tmpRelation = new Relation(int.Parse(node.Attributes["id"].InnerText));
+                tmpRelation = new Relation(tmpRelationId);
             }
 
             type = InfraType.ENone;
 
-
             // PARSE TAGS
             foreach (XmlNode nd in relationNodes) {
 
+                string attrZeroName = nd.Attributes[0].Name;
+                string attrZeroInnerText = nd.Attributes[0].InnerText;
+                string attrOneName = nd.Attributes.Count > 1 ? nd.Attributes[1].Name : "";
+                string attrOneInnerText = nd.Attributes.Count > 1 ? nd.Attributes[1].InnerText : "";
+
                 // parsing of waters 
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "waterway") {
-                    if (nd.Attributes[1].Name == "v" && (nd.Attributes[1].InnerText == "riverbank" || nd.Attributes[1].InnerText == "river")) {
+                if (attrZeroName == "k" && attrZeroInnerText == "waterway") {
+                    if (attrOneName == "v" && (attrOneInnerText == "riverbank" || attrOneInnerText == "river")) {
                         type = InfraType.EWater;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "natural") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "water") {
+                if (attrZeroName == "k" && attrZeroInnerText == "natural") {
+                    if (attrOneName == "v" && attrOneInnerText == "water") {
                         type = InfraType.EWater;
                     }
                 }
 
                 // parse green1
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "landuse") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "forest") {
+                if (attrZeroName == "k" && attrZeroInnerText == "landuse") {
+                    if (attrOneName == "v" && attrOneInnerText == "forest") {
                         type = InfraType.EGreen1;
                         tmpRelation.CategoryType = (int)CategoryType.EForest;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "cemetery") {
+                    else if (attrOneName == "v" && attrOneInnerText == "cemetery") {
                         type = InfraType.EGreen1;
                         tmpRelation.CategoryType = (int)CategoryType.ECemetery;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "natural") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "wood") {
+                if (attrZeroName == "k" && attrZeroInnerText == "natural") {
+                    if (attrOneName == "v" && attrOneInnerText == "wood") {
                         type = InfraType.EGreen1;
                         tmpRelation.CategoryType = (int)CategoryType.EForest;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "leisure") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "pitch") {
+                if (attrZeroName == "k" && attrZeroInnerText == "leisure") {
+                    if (attrOneName == "v" && attrOneInnerText == "pitch") {
                         type = InfraType.EGreen1;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "amenity") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "grave_yard") {
+                if (attrZeroName == "k" && attrZeroInnerText == "amenity") {
+                    if (attrOneName == "v" && attrOneInnerText == "grave_yard") {
                         type = InfraType.EGreen1;
                         tmpRelation.CategoryType = (int)CategoryType.ECemetery;
                     }
                 }
 
                 // parse green2
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "leisure") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "park") {
+                if (attrZeroName == "k" && attrZeroInnerText == "leisure") {
+                    if (attrOneName == "v" && attrOneInnerText == "park") {
                         type = InfraType.EGreen2;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "playground") {
-                        type = InfraType.EGreen2;
-                    }
-                }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "tourism") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "camp_site") {
+                    else if (attrOneName == "v" && attrOneInnerText == "playground") {
                         type = InfraType.EGreen2;
                     }
                 }
-
-
+                if (attrZeroName == "k" && attrZeroInnerText == "tourism") {
+                    if (attrOneName == "v" && attrOneInnerText == "camp_site") {
+                        type = InfraType.EGreen2;
+                    }
+                }
 
                 // parse green3
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "landuse") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "grass") {
+                if (attrZeroName == "k" && attrZeroInnerText == "landuse") {
+                    if (attrOneName == "v" && attrOneInnerText == "grass") {
                         type = InfraType.EGreen3;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "meadow") {
+                    else if (attrOneName == "v" && attrOneInnerText == "meadow") {
                         type = InfraType.EGreen3;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "natural") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "scrub") {
+                if (attrZeroName == "k" && attrZeroInnerText == "natural") {
+                    if (attrOneName == "v" && attrOneInnerText == "scrub") {
                         type = InfraType.EGreen3;
                         tmpRelation.CategoryType = (int)CategoryType.EScrub;
                     }
                 }
 
-
                 // parse brown
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "landuse") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "farmyard") {
+                if (attrZeroName == "k" && attrZeroInnerText == "landuse") {
+                    if (attrOneName == "v" && attrOneInnerText == "farmyard") {
                         type = InfraType.EBrown;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "farmland") {
+                    else if (attrOneName == "v" && attrOneInnerText == "farmland") {
                         type = InfraType.EBrown;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "allotments") {
+                    else if (attrOneName == "v" && attrOneInnerText == "allotments") {
                         type = InfraType.EBrown;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "orchard") {
+                    else if (attrOneName == "v" && attrOneInnerText == "orchard") {
                         type = InfraType.EBrown;
                         tmpRelation.CategoryType = (int)CategoryType.EOrchard;
                     }
                 }
 
                 // WAYS of the relation
-                if (nd.Attributes[0].Name == "type" && nd.Attributes[0].InnerText == "way") {
-                    if (nd.Attributes[1].Name == "ref") {
-                        int refValue = int.Parse(nd.Attributes[1].InnerText);
+                if (attrZeroName == "type" && attrZeroInnerText == "way") {
+                    if (attrOneName == "ref") {
+                        int refValue = int.Parse(attrOneInnerText);
 
                         if (nd.Attributes[2].Name == "role" && nd.Attributes[2].InnerText == "outer") {
-                            if (null == tmpRelation.OuterrwayList.Find(x => x.WayId == long.Parse(nd.Attributes["ref"].InnerText))) {
-                                tmpRelation.OuterrwayList.Add(new WayList(long.Parse(nd.Attributes["ref"].InnerText)));
+                            long refAttrTextLong = long.Parse(nd.Attributes["ref"].InnerText);
+                            if (null == tmpRelation.OuterrwayList.Find(x => x.WayId == refAttrTextLong)) {
+                                tmpRelation.OuterrwayList.Add(new WayList(refAttrTextLong));
                             }
                         }
-                        if (nd.Attributes[2].Name == "role" && nd.Attributes[2].InnerText == "inner") {
-                            if (null == tmpRelation.InnerwayList.Find(x => x.WayId == long.Parse(nd.Attributes["ref"].InnerText))) {
-                                tmpRelation.InnerwayList.Add(new WayList(long.Parse(nd.Attributes["ref"].InnerText)));
+                        else if (nd.Attributes[2].Name == "role" && nd.Attributes[2].InnerText == "inner") {
+                            long refAttrTextLong = long.Parse(nd.Attributes["ref"].InnerText);
+                            if (null == tmpRelation.InnerwayList.Find(x => x.WayId == refAttrTextLong)) {
+                                tmpRelation.InnerwayList.Add(new WayList(refAttrTextLong));
                             }
                         }
                     }
@@ -1326,7 +1310,7 @@ public class pLab_OSMReader : MonoBehaviour {
 
             InnerVectorList listVectortmp = new InnerVectorList();
 
-            if (tmpWayList != null && tmpRelation.InnerwayList[io].Filled == false) {
+            if (tmpWayList != null && !tmpRelation.InnerwayList[io].Filled) {
                 tmpRelation.InnerwayList[io].Filled = true;
                 foreach (long nodRef in tmpWayList.WayNodeIds) {
                     Node wayNode = allnodes.Find(x => x.Id == nodRef);
@@ -1380,30 +1364,32 @@ public class pLab_OSMReader : MonoBehaviour {
             XmlNodeList wayNodes = node.ChildNodes;
 
             Way tmpWay = new Way(int.Parse(node.Attributes["id"].InnerText));
-            tmpWay.Id = int.Parse(node.Attributes["id"].InnerText);
 
             if (allways.Find(a => a.Id == tmpWay.Id) == null) allways.Add(tmpWay);
 
             // Parse Tags
-
             foreach (XmlNode nd in wayNodes) {
                 if (nd.Attributes[0].Name == "ref") {
                     tmpWay.WayNodeIds.Add(long.Parse(nd.Attributes["ref"].InnerText));
                 }
 
+                string attrZeroName = nd.Attributes[0].Name;
+                string attrZeroInnerText = nd.Attributes[0].InnerText;
+                string attrOneName = nd.Attributes.Count > 1 ? nd.Attributes[1].Name : "";
+                string attrOneInnerText = nd.Attributes.Count > 1 ? nd.Attributes[1].InnerText : "";
 
                 // parse roads
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "highway") {
+                if (attrZeroName == "k" && attrZeroInnerText == "highway") {
                     // if the road narrow
-                    if (nd.Attributes[1].Name == "v" && (nd.Attributes[1].InnerText == "cycleway" || nd.Attributes[1].InnerText == "footway" || nd.Attributes[1].InnerText == "path" || nd.Attributes[1].InnerText == "pedestrian" || nd.Attributes[1].InnerText == "steps" || nd.Attributes[1].InnerText == "bridleway")) {
+                    if (attrOneName == "v" && (attrOneInnerText == "cycleway" || attrOneInnerText == "footway" || attrOneInnerText == "path" || attrOneInnerText == "pedestrian" || attrOneInnerText == "steps" || attrOneInnerText == "bridleway")) {
                         tmpWay.CategoryType = (int)CategoryType.ECycleWay;
                     }
                     // if the road is medium width
-                    if (nd.Attributes[1].Name == "v" && (nd.Attributes[1].InnerText == "track" || nd.Attributes[1].InnerText == "secondary" || nd.Attributes[1].InnerText == "tertiary" || nd.Attributes[1].InnerText == "residential" || nd.Attributes[1].InnerText == "service" || nd.Attributes[1].InnerText == "unclassified")) {
+                    else if (attrOneName == "v" && (attrOneInnerText == "track" || attrOneInnerText == "secondary" || attrOneInnerText == "tertiary" || attrOneInnerText == "residential" || attrOneInnerText == "service" || attrOneInnerText == "unclassified")) {
                         tmpWay.CategoryType = (int)CategoryType.ERoad;
                     }
                     // if the road is wide
-                    if (nd.Attributes[1].Name == "v" && (nd.Attributes[1].InnerText == "trunk" || nd.Attributes[1].InnerText == "primary" || nd.Attributes[1].InnerText == "trunk_link" || nd.Attributes[1].InnerText == "primary_link")) {
+                    else if (attrOneName == "v" && (attrOneInnerText == "trunk" || attrOneInnerText == "primary" || attrOneInnerText == "trunk_link" || attrOneInnerText == "primary_link")) {
                         tmpWay.CategoryType = (int)CategoryType.EMainRoad;
                     }
                     type = InfraType.EHighway;
@@ -1411,38 +1397,36 @@ public class pLab_OSMReader : MonoBehaviour {
 
 
                 // parse buildings
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "building") {
+                if (attrZeroName == "k" && attrZeroInnerText == "building") {
                     type = InfraType.EBuilding;
                 }
-
-
 
                 #region Green1 (forests, cemeteries, woods, pitches, graveyars)
 
                 // parse green1
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "landuse") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "forest") {
+                if (attrZeroName == "k" && attrZeroInnerText == "landuse") {
+                    if (attrOneName == "v" && attrOneInnerText == "forest") {
                         type = InfraType.EGreen1;
                         tmpWay.CategoryType = (int)CategoryType.EForest;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "cemetery") {
+                    else if (attrOneName == "v" && attrOneInnerText == "cemetery") {
                         type = InfraType.EGreen1;
                         tmpWay.CategoryType = (int)CategoryType.ECemetery;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "natural") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "wood") {
+                if (attrZeroName == "k" && attrZeroInnerText == "natural") {
+                    if (attrOneName == "v" && attrOneInnerText == "wood") {
                         type = InfraType.EGreen1;
                         tmpWay.CategoryType = (int)CategoryType.EForest;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "leisure") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "pitch") {
+                if (attrZeroName == "k" && attrZeroInnerText == "leisure") {
+                    if (attrOneName == "v" && attrOneInnerText == "pitch") {
                         type = InfraType.EGreen1;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "amenity") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "grave_yard") {
+                if (attrZeroName == "k" && attrZeroInnerText == "amenity") {
+                    if (attrOneName == "v" && attrOneInnerText == "grave_yard") {
                         type = InfraType.EGreen1;
                         tmpWay.CategoryType = (int)CategoryType.ECemetery;
                     }
@@ -1453,16 +1437,16 @@ public class pLab_OSMReader : MonoBehaviour {
                 #region Green2 (parks, playgrounds, campsites)
 
                 // parse green2
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "leisure") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "park") {
+                if (attrZeroName == "k" && attrZeroInnerText == "leisure") {
+                    if (attrOneName == "v" && attrOneInnerText == "park") {
                         type = InfraType.EGreen2;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "playground") {
+                    else if (attrOneName == "v" && attrOneInnerText == "playground") {
                         type = InfraType.EGreen2;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "tourism") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "camp_site") {
+                if (attrZeroName == "k" && attrZeroInnerText == "tourism") {
+                    if (attrOneName == "v" && attrOneInnerText == "camp_site") {
                         type = InfraType.EGreen2;
                     }
                 }
@@ -1472,16 +1456,13 @@ public class pLab_OSMReader : MonoBehaviour {
                 #region Green3 (grasslands, meadows, scrubs)
 
                 // parse green3
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "landuse") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "grass") {
-                        type = InfraType.EGreen3;
-                    }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "meadow") {
+                if (attrZeroName == "k" && attrZeroInnerText == "landuse") {
+                    if (attrOneName == "v" && (attrOneInnerText == "grass" || attrOneInnerText == "meadow")) {
                         type = InfraType.EGreen3;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "natural") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "scrub") {
+                if (attrZeroName == "k" && attrZeroInnerText == "natural") {
+                    if (attrOneName == "v" && attrOneInnerText == "scrub") {
                         type = InfraType.EGreen3;
                         tmpWay.CategoryType = (int)CategoryType.EScrub;
                     }
@@ -1492,17 +1473,17 @@ public class pLab_OSMReader : MonoBehaviour {
                 #region Brown (farmyards, allotments, orchards)
 
                 // parse brown
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "landuse") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "farmyard") {
+                if (attrZeroName == "k" && attrZeroInnerText == "landuse") {
+                    if (attrOneName == "v" && attrOneInnerText == "farmyard") {
                         type = InfraType.EBrown;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "farmland") {
+                    else if (attrOneName == "v" && attrOneInnerText == "farmland") {
                         type = InfraType.EBrown;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "allotments") {
+                    else if (attrOneName == "v" && attrOneInnerText == "allotments") {
                         type = InfraType.EBrown;
                     }
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "orchard") {
+                    else if (attrOneName == "v" && attrOneInnerText == "orchard") {
                         type = InfraType.EBrown;
                         tmpWay.CategoryType = (int)CategoryType.EOrchard;
                     }
@@ -1513,8 +1494,8 @@ public class pLab_OSMReader : MonoBehaviour {
                 #region Railways
 
                 // parse railways
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "railway") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "rail") {
+                if (attrZeroName == "k" && attrZeroInnerText == "railway") {
+                    if (attrOneName == "v" && attrOneInnerText == "rail") {
                         type = InfraType.ERailWay;
                     }
                 }
@@ -1524,8 +1505,8 @@ public class pLab_OSMReader : MonoBehaviour {
                 #region Parking lots
 
                 // parse parking lots
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "amenity") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "parking") {
+                if (attrZeroName == "k" && attrZeroInnerText == "amenity") {
+                    if (attrOneName == "v" && attrOneInnerText == "parking") {
                         type = InfraType.EParkingLot;
                     }
                 }
@@ -1535,23 +1516,23 @@ public class pLab_OSMReader : MonoBehaviour {
                 #region Waters
 
                 // parse waters
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "natural") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "water") {
+                if (attrZeroName == "k" && attrZeroInnerText == "natural") {
+                    if (attrOneName == "v" && attrOneInnerText == "water") {
                         type = InfraType.EWater;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "waterway") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "riverbank") {
+                if (attrZeroName == "k" && attrZeroInnerText == "waterway") {
+                    if (attrOneName == "v" && attrOneInnerText == "riverbank") {
                         type = InfraType.EWater;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "leisure") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "swimming_pool") {
+                if (attrZeroName == "k" && attrZeroInnerText == "leisure") {
+                    if (attrOneName == "v" && attrOneInnerText == "swimming_pool") {
                         type = InfraType.EWater;
                     }
                 }
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "waterway") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "stream") {
+                if (attrZeroName == "k" && attrZeroInnerText == "waterway") {
+                    if (attrOneName == "v" && attrOneInnerText == "stream") {
                         type = InfraType.EStream;
                     }
                 }
@@ -1560,8 +1541,8 @@ public class pLab_OSMReader : MonoBehaviour {
                 #region Wetlands
 
                 // parse wetlands
-                if (nd.Attributes[0].Name == "k" && nd.Attributes[0].InnerText == "natural") {
-                    if (nd.Attributes[1].Name == "v" && nd.Attributes[1].InnerText == "wetland") {
+                if (attrZeroName == "k" && attrZeroInnerText == "natural") {
+                    if (attrOneName == "v" && attrOneInnerText == "wetland") {
                         type = InfraType.EWetland;
                     }
                 }
@@ -1630,15 +1611,16 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="tmpWay">the way</param>
     /// <param name="wayNodes">XML nodes to parse</param>
     private void FindBuildingInfo(Way tmpWay, XmlNodeList wayNodes) {
-        string info = "";
+        // string info = "";
         string name = "";
 
         foreach (XmlNode item in wayNodes) {
-            if (item.Attributes[0].Name == "k" && item.Attributes[0].InnerText == "amenity") {
-                if (item.Attributes[1].Name == "v") {
-                    info = item.Attributes[1].InnerText;
-                }
-            }
+            //Info is disabled because they are in english and contain underscores e.g. "bus_station"
+            // if (item.Attributes[0].Name == "k" && item.Attributes[0].InnerText == "amenity") {
+            //     if (item.Attributes[1].Name == "v") {
+            //         info = item.Attributes[1].InnerText;
+            //     }
+            // }
             if (item.Attributes[0].Name == "k" && item.Attributes[0].InnerText == "name") {
                 if (item.Attributes[1].Name == "v") {
                     name = item.Attributes[1].InnerText;
@@ -1646,8 +1628,17 @@ public class pLab_OSMReader : MonoBehaviour {
             }
         }
 
-        if (!string.IsNullOrEmpty(info) || !string.IsNullOrEmpty(name)) {
-            buildingInfos.Add(new BuildingInfo(tmpWay.Id, info + "\n" + name));
+        // bool hasInfo = !string.IsNullOrWhiteSpace(info);
+        bool hasName = !string.IsNullOrWhiteSpace(name);
+
+        string buildingInfo = "";
+
+        if (hasName) {
+            buildingInfo = name;
+        }
+
+        if (!string.IsNullOrWhiteSpace(buildingInfo)) {
+            buildingInfos.Add(new BuildingInfo(tmpWay.Id, buildingInfo));
         }
     }
 
@@ -1661,8 +1652,10 @@ public class pLab_OSMReader : MonoBehaviour {
     private void GenerateBuildings(List<Way> buildings, List<Transform> buildingsObjects, GameObject BuildsParent, List<Node> nodes) {
         // Start of Buildings
         for (int i = 0; i < buildings.Count; i++) {
-            buildingsObjects.Add(new GameObject("BuildingObject" + buildings[i].Id).transform);
-            buildingsObjects[i].gameObject.transform.parent = BuildsParent.transform;
+
+            GameObject buildingObject = new GameObject("BuildingObject" + buildings[i].Id);
+            buildingsObjects.Add(buildingObject.transform);
+            buildingObject.transform.parent = BuildsParent.transform;
             int buildCount = buildings[i].WayNodeIds.Count;
 
             List<Vector2> vectors = new List<Vector2>();
@@ -1722,30 +1715,31 @@ public class pLab_OSMReader : MonoBehaviour {
                 }
             }
 
-            wall.transform.parent = buildingsObjects[i].transform;
-            wall.gameObject.AddComponent<MeshFilter>();
-            wall.gameObject.AddComponent<MeshRenderer>();
+            wall.transform.parent = buildingObject.transform;
+            wall.AddComponent<MeshFilter>();
+            wall.AddComponent<MeshRenderer>();
             Mesh mshWall = new Mesh();
             mshWall.vertices = vectorsWall.ToArray();
             mshWall.triangles = triangles.ToArray();
             mshWall.RecalculateNormals();
             mshWall.RecalculateBounds();
-            wall.gameObject.GetComponent<MeshFilter>().sharedMesh = mshWall;
-            wall.gameObject.GetComponent<MeshRenderer>().material = wallMaterial;
-            wall.gameObject.GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
-            wall.gameObject.layer = buildingLayer;
-                            poly.CalcPlaneNormal(Vector3.up);
-            Poly2Mesh.CreateGameObject(poly, buildingsObjects[i].gameObject);
-            buildingsObjects[i].gameObject.AddComponent<BoxCollider>();
+            wall.GetComponent<MeshFilter>().sharedMesh = mshWall;
+            wall.GetComponent<MeshRenderer>().sharedMaterial = wallMaterial;
+            wall.GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
+            wall.layer = buildingLayer;
+
+            poly.CalcPlaneNormal(Vector3.up);
+            Poly2Mesh.CreateGameObject(poly, buildingObject);
+            buildingObject.AddComponent<BoxCollider>();
 
             //What layer should be used here, buildingslayer maybe?
-            buildingsObjects[i].gameObject.layer = buildingLayer;
-            buildingsObjects[i].gameObject.GetComponent<MeshRenderer>().material = roofMaterial;
+            buildingObject.layer = buildingLayer;
+            buildingObject.GetComponent<MeshRenderer>().sharedMaterial = roofMaterial;
             // if there is Building Info with this buildings ID create GameObject with TextMesh over the building for it
-            var info = buildingInfos.Find(o => o.WayId == buildings[i].Id);
+            BuildingInfo info = buildingInfos.Find(o => o.WayId == buildings[i].Id);
 
-            if (info != null) {
-                CreateBuldingInfoObject(info, buildingsObjects[i]);
+            if (null != info) {
+                CreateBuldingInfoObject(info, buildingObject.transform);
             }
         }
         // End of Buildings
@@ -1760,6 +1754,7 @@ public class pLab_OSMReader : MonoBehaviour {
         GameObject infoObject = new GameObject();
 
         TextMesh text = infoObject.AddComponent<TextMesh>();
+        infoObject.AddComponent<pLab_BuildingInfo>();
 
         text.text = info.Info;
 
@@ -1774,15 +1769,12 @@ public class pLab_OSMReader : MonoBehaviour {
 
         buildingInfoObjects.Add(infoObject);
 
-        var cam = Camera.main;
+        Camera cam = Camera.main;
 
-        if (cam != null) {
+        if (cam != null && cam.transform != null) {
+            infoObject.transform.LookAt(cam.transform);
 
-            if (cam.transform != null) {
-                infoObject.transform.LookAt(cam.transform);
-
-                infoObject.transform.rotation = Quaternion.LookRotation(infoObject.transform.position - cam.transform.position);
-            }
+            infoObject.transform.rotation = Quaternion.LookRotation(infoObject.transform.position - cam.transform.position);
         }
     }
 
@@ -1799,11 +1791,12 @@ public class pLab_OSMReader : MonoBehaviour {
     private void GenerateRoads(string category, List<Way> roads, List<Transform> roadsObjects, GameObject waysParent, List<Node> nodes, double axBound, double ayBound, GameObject block) {
         // Start of Roads
         for (int i = 0; i < roads.Count; i++) {
-            roadsObjects.Add(new GameObject(category + "Object" + roads[i].Id).transform);
-            roadsObjects[i].gameObject.transform.parent = waysParent.transform;
-            LineRenderer lRender = roadsObjects[i].gameObject.AddComponent<LineRenderer>();
-            MeshFilter mFilter = roadsObjects[i].gameObject.AddComponent<MeshFilter>();
-            MeshRenderer mRender = roadsObjects[i].gameObject.AddComponent<MeshRenderer>();
+            GameObject roadObject = new GameObject(category + "Object" + roads[i].Id); 
+            roadObject.transform.parent = waysParent.transform;
+            LineRenderer lRender = roadObject.AddComponent<LineRenderer>();
+            MeshFilter mFilter = roadObject.AddComponent<MeshFilter>();
+            MeshRenderer mRender = roadObject.AddComponent<MeshRenderer>();
+            roadsObjects.Add(roadObject.transform);
 
             float width = 4f;
 
@@ -1841,9 +1834,10 @@ public class pLab_OSMReader : MonoBehaviour {
 
             }
             mFilter.sharedMesh = new Mesh();
-            lRender.BakeMesh(roadsObjects[i].gameObject.GetComponent<MeshFilter>().sharedMesh, true);
+            lRender.BakeMesh(mFilter.sharedMesh, true);
             lRender.enabled = false;
-            mRender.material = roofMaterial;
+            // mRender.material = roofMaterial;
+            mRender.sharedMaterial = roofMaterial;
         }
 
         CombineInstance[] combine = new CombineInstance[roadsObjects.Count];
@@ -1866,7 +1860,7 @@ public class pLab_OSMReader : MonoBehaviour {
         combineGO.isStatic = true;
         BuildNavMesh(combineGO.transform, axBound, ayBound);
 
-        var navMesh = NavMesh.CalculateTriangulation();
+        NavMeshTriangulation navMesh = NavMesh.CalculateTriangulation();
         Vector3[] verticesa = navMesh.vertices;
 
         Vector2[] uvs = new Vector2[verticesa.Length];
@@ -1885,22 +1879,22 @@ public class pLab_OSMReader : MonoBehaviour {
         roadCombineMesh.RecalculateBounds();
 
         GameObject roadCombineGameObject = new GameObject("roadCombineGameObject");
-        roadCombineGameObject.AddComponent<MeshRenderer>();
-        roadCombineGameObject.AddComponent<MeshFilter>();
-        roadCombineGameObject.GetComponent<MeshFilter>().mesh = roadCombineMesh;
+        MeshRenderer meshRenderer = roadCombineGameObject.AddComponent<MeshRenderer>();
+        MeshFilter meshFilter = roadCombineGameObject.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = roadCombineMesh;
 
         switch (category) {
             case "road":
-                roadCombineGameObject.gameObject.GetComponent<MeshRenderer>().material = roadMaterial;
-                roadCombineGameObject.gameObject.layer = roadLayer;
+                meshRenderer.sharedMaterial = roadMaterial;
+                roadCombineGameObject.layer = roadLayer;
                 break;
             case "railway":
-                roadCombineGameObject.gameObject.GetComponent<MeshRenderer>().material = railwayMaterial;
-                roadCombineGameObject.gameObject.layer = railwayLayer;
+                meshRenderer.sharedMaterial = railwayMaterial;
+                roadCombineGameObject.layer = railwayLayer;
                 break;
             case "stream":
-                roadCombineGameObject.gameObject.GetComponent<MeshRenderer>().material = waterMaterial;
-                roadCombineGameObject.gameObject.layer = waterLayer;
+                meshRenderer.sharedMaterial = waterMaterial;
+                roadCombineGameObject.layer = waterLayer;
                 break;
         }
 
@@ -1920,26 +1914,31 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="nodeList">List of XMLNodes containing node data</param>
     private void ParseNodes(XmlNodeList nodeList) {
         foreach (XmlNode item in nodeList) {
-            var idNum = long.Parse(item.Attributes[0].InnerText);
+            long idNum = long.Parse(item.Attributes[0].InnerText);
 
             XmlNodeList tags = item.ChildNodes;
 
             foreach (XmlNode item2 in tags) {
-                if (item2.Attributes[0].Name == "k" && item2.Attributes[0].InnerText == "historic") {
-                    if (item2.Attributes[1].Name == "v" && item2.Attributes[1].InnerText == "memorial") {
+                string attrZeroName = item2.Attributes[0].Name;
+                string attrZeroInnerText = item2.Attributes[0].InnerText;
+                string attrOneName = item2.Attributes[1].Name;
+                string attrOneInnerText = item2.Attributes[0].InnerText;
+
+                if (attrZeroName == "k" && attrZeroInnerText == "historic") {
+                    if (attrOneName == "v" && attrOneInnerText == "memorial") {
                         PlaceObjectOnNode("tombstones3", idNum);
                     }
                 }
 
-                if (item2.Attributes[0].Name == "k" && item2.Attributes[0].InnerText == "natural") {
-                    if (item2.Attributes[1].Name == "v" && item2.Attributes[1].InnerText == "tree") {
+                else if (attrZeroName == "k" && attrZeroInnerText == "natural") {
+                    if (attrOneName == "v" && attrOneInnerText == "tree") {
                         int no = UnityEngine.Random.Range(1, 1);
                         PlaceObjectOnNode("tree" + no.ToString(), idNum);
                     }
                 }
 
-                if (item2.Attributes[0].Name == "k" && item2.Attributes[0].InnerText == "amenity") {
-                    if (item2.Attributes[1].Name == "v" && item2.Attributes[1].InnerText == "parking") {
+                else if (attrZeroName == "k" && attrZeroInnerText == "amenity") {
+                    if (attrOneName == "v" && attrOneInnerText == "parking") {
                         PlaceObjectOnNode("parking", idNum);
                     }
                 }
@@ -2051,5 +2050,51 @@ public class pLab_OSMReader : MonoBehaviour {
             Quaternion.Euler(Vector3.up));
 
         navMeshDataInstance = NavMesh.AddNavMeshData(navData);
+    }
+
+    private void ClearLists() {
+
+        allnodes = new List<Node>();
+
+        allways = new List<Way>();
+
+        waterrelations = new List<Relation>();
+
+        wetlandrelations = new List<Relation>();
+
+        green1relations = new List<Relation>();
+
+        green2relations = new List<Relation>();
+
+        green3relations = new List<Relation>();
+
+        brownrelations = new List<Relation>();
+
+        waterrelationsObjects = new List<Transform>();
+        wetlandrelationsObjects = new List<Transform>();
+        green1relationsObjects = new List<Transform>();
+        green2relationsObjects = new List<Transform>();
+        green3relationsObjects = new List<Transform>();
+        brownrelationsObjects = new List<Transform>();
+        green1waysObjects = new List<Transform>();
+        green2waysObjects = new List<Transform>();
+        green3waysObjects = new List<Transform>();
+        brownwaysObjects = new List<Transform>();
+        parkinglotwaysObjects = new List<Transform>();
+        waterwayObjects = new List<Transform>();
+        wetlandwayObjects = new List<Transform>();
+        alreadyMovedObjects = new List<Transform>();
+
+        green1ways = new List<Way>();
+        green2ways = new List<Way>();
+        green3ways = new List<Way>();
+        brownways = new List<Way>();
+        waterways = new List<Way>();
+        wetlandways = new List<Way>();
+        parkinglotWays = new List<Way>();
+
+        waylists = new List<WayList>();
+        buildingInfos = new List<BuildingInfo>();
+        buildingInfoObjects = new List<GameObject>();
     }
 }

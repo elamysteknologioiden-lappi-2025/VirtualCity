@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 941b6b485ee4efb4d8078758b6d30ac6, type: 3}
   m_Name: OSMDATA_ExampleScene
   m_EditorClassIdentifier: 
+  minLat: 66.7001
+  minLon: 27.4047
+  maxLat: 66.7177000
+  maxLon: 27.4533
   waterMaterial: {fileID: 2100000, guid: a56e2fad1a18aaf459bc2f9b750b8749, type: 2}
   roadMaterial: {fileID: 2100000, guid: 73ba0fc010735d04898dd3c818810797, type: 2}
   railwayMaterial: {fileID: 2100000, guid: 73ba0fc010735d04898dd3c818810797, type: 2}
@@ -22,10 +26,6 @@ MonoBehaviour:
   green3Material: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
   brownMaterial: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
   wetlandMaterial: {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
-  minLat: 66.7002000
-  minLon: 27.4047000
-  maxLat: 66.7177000
-  maxLon: 27.4721000
   waterLayer: 4
   roadLayer: 8
   railwayLayer: 9
