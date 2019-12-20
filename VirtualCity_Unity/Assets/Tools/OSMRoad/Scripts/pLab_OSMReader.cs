@@ -319,6 +319,11 @@ public class pLab_OSMReader : MonoBehaviour {
     private bool finishedGeneratingMap = false;
 
     /// <summary>
+    /// Is the data coming from file (or server)
+    /// </summary>
+    private bool isGeneratingFromFile = false;
+
+    /// <summary>
     /// Helper GameObject to serve as a parent for SingleObjects
     /// </summary>
     private GameObject SingleObjectParent = null;
@@ -337,6 +342,10 @@ public class pLab_OSMReader : MonoBehaviour {
     ///  Layer Mask for navmesh
     /// </summary>
     public LayerMask includedLayerMask = 0;
+
+    #region Properties
+    
+    #endregion
 
     /// <summary>
     /// Loads OSMEditorData if it exists, create and save if it doesnt
@@ -407,6 +416,8 @@ public class pLab_OSMReader : MonoBehaviour {
         int aGreenway1Layer = 0, int aGreenway2Layer = 0, int aGreenway3Layer = 0, int aBrownwayLayer = 0, int aWetlandLayer = 0,
         Color32? aBuildingInfoTextColor = null, Color32? aParkinglotTextColor = null) {
 
+        isGeneratingFromFile = false;
+
         waterMaterial = aWaterMaterial;
         roofMaterial = aRoofMaterial;
         wallMaterial = aWallMaterial;
@@ -436,7 +447,6 @@ public class pLab_OSMReader : MonoBehaviour {
 
         FindAndInitializeUILayer();
 
-        // TMP VALUES, PLEASE CHANGE THOSEs
         double latBlock = 0.005;
         double lonBlock = 0.010;
 
@@ -494,8 +504,10 @@ public class pLab_OSMReader : MonoBehaviour {
         Material aGreen2Material = null, Material aGreen3Material = null, Material aBrownMaterial = null,
         Material aWetlandMaterial = null, int aWaterLayer = 4, int aBuildingLayer = 0, int aRoadLayer = 0, int aRailwayLayer = 0, 
         int aGreenway1Layer = 0, int aGreenway2Layer = 0, int aGreenway3Layer = 0, int aBrownwayLayer = 0, int aWetlandLayer = 0,
-        Color32? aBuildingInfoTextColor = null, Color32? aParkinglotTextColor = null) {
+        Color32? aBuildingInfoTextColor = null, Color32? aParkinglotTextColor = null)
+    {
 
+        isGeneratingFromFile = true;
         waterMaterial = aWaterMaterial;
         roofMaterial = aRoofMaterial;
         wallMaterial = aWallMaterial;
@@ -545,20 +557,32 @@ public class pLab_OSMReader : MonoBehaviour {
             double minLon = 99999;
 
             foreach (XmlNode i in elementList) {
-                if (i.Attributes["lat"].InnerText.Length > 0) {
-                    if( minLat >= double.Parse(i.Attributes["lat"].InnerText)) {
-                        minLat = double.Parse(i.Attributes["lat"].InnerText);
-                    }
+                string latText = i.Attributes["lat"].InnerText;
 
+                if (latText.Length > 0) {
+
+                    double latDouble;
+                    if (double.TryParse(latText, out latDouble)) {
+                        if( minLat >= latDouble) {
+                            minLat = latDouble;
+                        }
+                    }
                 }
 
-                if (i.Attributes["lon"].InnerText.Length > 0) {
-                    if (minLon >= double.Parse(i.Attributes["lon"].InnerText)) {
-                        minLon = double.Parse(i.Attributes["lon"].InnerText);
-                    }
+                string lonText = i.Attributes["lon"].InnerText;
 
+                if (lonText.Length > 0) {
+
+                    double lonDouble;
+
+                    if (double.TryParse(lonText, out lonDouble)) {
+                        if (minLon >= lonDouble) {
+                            minLon = lonDouble;
+                        }
+                    }
                 }
             }
+
             pLAB_GeoUtils.LatLongtoUTM(minLat, minLon, out UTMN_Zero, out UTME_Zero);
         }
 
@@ -658,11 +682,6 @@ public class pLab_OSMReader : MonoBehaviour {
 
         // Debug.LogFormat("Min Lat UTM (UTMX): {0}, Min Lon UTM (UTMY): {1}", utmX, utmY);
         // pLab_GeoMap geoMap = GameObject.FindObjectOfType<pLab_GeoMap>();
-        
-        // if (geoMap != null) {
-        //     geoMap.UtmX = utmY;
-        //     geoMap.UtmY = utmX;
-        // }
 
         foreach (XmlNode attr in elementList) {
             double UTMN = 0;
@@ -835,22 +854,24 @@ public class pLab_OSMReader : MonoBehaviour {
 
                 foreach (long nodRef in list) {
                     Node wayNode = allnodes.Find(x => x.Id == nodRef);
-                    x = wayNode.Latitude;
-                    y = wayNode.Longitude;
+                    if (wayNode != null) {
+                        x = wayNode.Latitude;
+                        y = wayNode.Longitude;
 
-                    float z = 0;
+                        float z = 0;
 
-                    switch (category) {
-                        case "Water":
-                            z += 0.1f;
-                            break;
-                        case "Wetland":
-                            z += 0.2f;
-                            break;
-                        default:
-                            break;
+                        switch (category) {
+                            case "Water":
+                                z += 0.1f;
+                                break;
+                            case "Wetland":
+                                z += 0.2f;
+                                break;
+                            default:
+                                break;
+                        }
+                        tempVectors.Add(new Vector3((float)(y - UTME_Zero), z, (float)(x - UTMN_Zero)));
                     }
-                    tempVectors.Add(new Vector3((float)(y - UTME_Zero), z, (float)(x - UTMN_Zero)));
                 }
                 poly.outside = tempVectors;
                 poly.CalcPlaneNormal(Vector3.up);
@@ -930,7 +951,6 @@ public class pLab_OSMReader : MonoBehaviour {
             if (gameObject.transform.position.y == gObjhit.transform.position.y) {
                 // if original is bigger than hit
                 if (bounds.size.sqrMagnitude > collhit.bounds.size.sqrMagnitude) {
-                    // Debug.Log(gameObject.name + " was bigger than " + gObjhit.name);
                     if (!originalmoved) {
                         if (!hitmoved) {
                             gObjhit.transform.position += new Vector3(0, 0.1f, 0);
@@ -947,8 +967,6 @@ public class pLab_OSMReader : MonoBehaviour {
                         if (!hitmoved) {
                             gObjhit.transform.position += new Vector3(0, 0.1f, 0);
                             alreadyMovedObjects.Add(gObjhit.transform);
-
-                            Debug.Log(gObjhit.name + " was moved up");
                         }
                         if (hitmoved) {
                         }
@@ -1280,20 +1298,22 @@ public class pLab_OSMReader : MonoBehaviour {
                 tmpRelation.OuterrwayList[io].Filled = true;
                 foreach (long nodRef in tmpWayList.WayNodeIds) {
                     Node wayNode = allnodes.Find(x => x.Id == nodRef);
-                    x = wayNode.Latitude;
-                    y = wayNode.Longitude;
+                    if (wayNode != null) {
+                        x = wayNode.Latitude;
+                        y = wayNode.Longitude;
 
-                    float z = 0;
+                        float z = 0;
 
-                    switch (type) {
-                        case InfraType.EWater:
-                            z = 0.01f;
-                            break;
-                        case InfraType.EWetland:
-                            z = 0.02f;
-                            break;
+                        switch (type) {
+                            case InfraType.EWater:
+                                z = 0.01f;
+                                break;
+                            case InfraType.EWetland:
+                                z = 0.02f;
+                                break;
+                        }
+                        tmpRelation.OuterVectors.Add(new Vector3((float)(y - UTME_Zero), z, (float)(x - UTMN_Zero)));
                     }
-                    tmpRelation.OuterVectors.Add(new Vector3((float)(y - UTME_Zero), z, (float)(x - UTMN_Zero)));
                 }
             }
         }
@@ -1314,22 +1334,25 @@ public class pLab_OSMReader : MonoBehaviour {
                 tmpRelation.InnerwayList[io].Filled = true;
                 foreach (long nodRef in tmpWayList.WayNodeIds) {
                     Node wayNode = allnodes.Find(x => x.Id == nodRef);
-                    x = wayNode.Latitude;
-                    y = wayNode.Longitude;
+                    if (wayNode != null) {
+                        x = wayNode.Latitude;
+                        y = wayNode.Longitude;
 
-                    float z = 0;
+                        float z = 0;
 
-                    switch (type) {
-                        case InfraType.EWater:
-                            z = 0.01f;
-                            break;
-                        case InfraType.EWetland:
-                            z = 0.02f;
-                            break;
+                        switch (type) {
+                            case InfraType.EWater:
+                                z = 0.01f;
+                                break;
+                            case InfraType.EWetland:
+                                z = 0.02f;
+                                break;
+                        }
+
+                        listVectortmp.InnerVectors.Add(new Vector3((float)(y - UTME_Zero), z, (float)(x - UTMN_Zero)));
                     }
-
-                    listVectortmp.InnerVectors.Add(new Vector3((float)(y - UTME_Zero), z, (float)(x - UTMN_Zero)));
                 }
+
                 tmpRelation.InnerVectorLists.Add(listVectortmp);
             }
         }
@@ -1791,6 +1814,8 @@ public class pLab_OSMReader : MonoBehaviour {
     private void GenerateRoads(string category, List<Way> roads, List<Transform> roadsObjects, GameObject waysParent, List<Node> nodes, double axBound, double ayBound, GameObject block) {
         // Start of Roads
         for (int i = 0; i < roads.Count; i++) {
+            if (roads[i].WayNodeIds.Count <= 1) continue;
+
             GameObject roadObject = new GameObject(category + "Object" + roads[i].Id); 
             roadObject.transform.parent = waysParent.transform;
             LineRenderer lRender = roadObject.AddComponent<LineRenderer>();
@@ -1824,21 +1849,27 @@ public class pLab_OSMReader : MonoBehaviour {
             lRender.positionCount = roads[i].WayNodeIds.Count;
 
             for (int j = 0; j < roads[i].WayNodeIds.Count; j++) {
-                foreach (Node nod in nodes) {
-                    if (nod.Id == roads[i].WayNodeIds[j]) {
-                        x = nod.Latitude;
-                        y = nod.Longitude;
-                    }
-                }
+                Node nod = nodes.Find(n => n.Id == roads[i].WayNodeIds[j]);
+                if (nod == null) continue;
+
+                x = nod.Latitude;
+                y = nod.Longitude;
+                
                 lRender.SetPosition(j, new Vector3((float)(y - UTME_Zero), 0, (float)(x - UTMN_Zero)));
 
             }
             mFilter.sharedMesh = new Mesh();
             lRender.BakeMesh(mFilter.sharedMesh, true);
             lRender.enabled = false;
-            // mRender.material = roofMaterial;
             mRender.sharedMaterial = roofMaterial;
         }
+
+        if (roadsObjects.Count <= 1) {
+            foreach(Transform roadTransform in roadsObjects) {
+                DestroyImmediate(roadTransform.gameObject);
+            }
+            return;
+        };
 
         CombineInstance[] combine = new CombineInstance[roadsObjects.Count];
 
@@ -1852,8 +1883,8 @@ public class pLab_OSMReader : MonoBehaviour {
         }
 
         GameObject combineGO = new GameObject("combine");
-        combineGO.gameObject.AddComponent<MeshFilter>();
-        combineGO.gameObject.AddComponent<MeshRenderer>();
+        combineGO.AddComponent<MeshFilter>();
+        combineGO.AddComponent<MeshRenderer>();
         combineGO.GetComponent<MeshFilter>().sharedMesh = new Mesh();
         combineGO.GetComponent<MeshFilter>().sharedMesh.CombineMeshes(combine);
 
@@ -1960,7 +1991,7 @@ public class pLab_OSMReader : MonoBehaviour {
         }
 
         if (SingleObjectParent != null) {
-            var locNode = allnodes.Find(x => x.Id == idNum);
+            Node locNode = allnodes.Find(x => x.Id == idNum);
             if (locNode != null) {
                 // create object
                 GameObject model = null;
@@ -2030,8 +2061,13 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="aY"></param>
     private void BuildNavMesh(Transform xform, double aX, double aY) {
         navMeshDataInstance.Remove();
-        aX += 500;
-        aY += 500;
+
+        Vector3 boundsSize = isGeneratingFromFile ? new Vector3(5000, 100, 5000): new Vector3(500, 100, 500);
+        aX += boundsSize.x / 2;
+        aY += boundsSize.z / 2;
+
+        Vector3 boundsCenter = new Vector3((float) aY, boundsSize.y / 2, (float) aX);
+        Bounds navMeshBounds = new Bounds(boundsCenter, boundsSize);
 
         List<NavMeshBuildSource> buildSources = new List<NavMeshBuildSource>();
         NavMeshBuilder.CollectSources(
@@ -2045,13 +2081,16 @@ public class pLab_OSMReader : MonoBehaviour {
         NavMeshData navData = NavMeshBuilder.BuildNavMeshData(
             NavMesh.GetSettingsByID(0),
             buildSources,
-            new Bounds(new Vector3((float)aY, 0, (float)aX), new Vector3(1000, 100, 1000)),
+            navMeshBounds,
             Vector3.down,
             Quaternion.Euler(Vector3.up));
 
         navMeshDataInstance = NavMesh.AddNavMeshData(navData);
     }
 
+    /// <summary>
+    /// Clear lists so they won't stay in memory
+    /// </summary>
     private void ClearLists() {
 
         allnodes = new List<Node>();
