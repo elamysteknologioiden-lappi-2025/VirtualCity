@@ -468,10 +468,10 @@ public class pLab_OSMReader : MonoBehaviour {
         for (int ilat = 0; ilat < latBlockCount; ilat++) {
             for (int ilon = 0; ilon < lonBlockCount; ilon++) {
                 string tmpUrl = apiUrl;
-                tmpUrl += (aMinLon + lonBlock * ilon).ToString() + ",";
-                tmpUrl += (aMinLat + latBlock * ilat).ToString() + ",";
-                tmpUrl += (aMinLon + lonBlock * (ilon + 1)).ToString() + ",";
-                tmpUrl += (aMinLat + latBlock * (ilat + 1)).ToString();
+                tmpUrl += (aMinLon + lonBlock * ilon).ToString(CultureInfo.InvariantCulture) + ",";
+                tmpUrl += (aMinLat + latBlock * ilat).ToString(CultureInfo.InvariantCulture) + ",";
+                tmpUrl += (aMinLon + lonBlock * (ilon + 1)).ToString(CultureInfo.InvariantCulture) + ",";
+                tmpUrl += (aMinLat + latBlock * (ilat + 1)).ToString(CultureInfo.InvariantCulture);
                 GetRequest(tmpUrl, blockCount, requestCount);
                 blockCount++;
             }
@@ -672,7 +672,7 @@ public class pLab_OSMReader : MonoBehaviour {
         Debug.Log("Created asset file for VirtualCity scene " + scene + " to " + assetPath);
         EditorGUIUtility.PingObject(asset);
         #endif
-        
+
         return asset;
     }
 
