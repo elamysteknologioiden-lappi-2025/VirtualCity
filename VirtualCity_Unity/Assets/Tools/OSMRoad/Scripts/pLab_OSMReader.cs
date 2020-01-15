@@ -667,12 +667,12 @@ public class pLab_OSMReader : MonoBehaviour {
             Debug.LogError(e.Message);
             return null;
         }
-        
+
         AssetDatabase.SaveAssets();
         Debug.Log("Created asset file for VirtualCity scene " + scene + " to " + assetPath);
         EditorGUIUtility.PingObject(asset);
         #endif
-
+        
         return asset;
     }
 

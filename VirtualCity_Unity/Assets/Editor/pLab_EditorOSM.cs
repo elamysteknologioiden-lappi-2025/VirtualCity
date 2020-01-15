@@ -46,7 +46,6 @@ using System.IO;
 /// pLab_EditorOSM
 /// </summary>
 [CustomEditor(typeof(pLab_OSMReader))]
-[CanEditMultipleObjects]
 public class pLab_EditorOSM : Editor {
 
 
@@ -83,6 +82,7 @@ public class pLab_EditorOSM : Editor {
 
     public override void OnInspectorGUI() {
         pLab_OSMReader osmReader = (pLab_OSMReader) target;
+        EditorGUI.BeginChangeCheck();
         EditorGUILayout.BeginHorizontal();
         osmReader.editorData = (OSMEditorData) EditorGUILayout.ObjectField("Editor data", osmReader.editorData, typeof(OSMEditorData), false);
         if (null == osmReader.editorData) {
@@ -95,13 +95,21 @@ public class pLab_EditorOSM : Editor {
             }
         }
         EditorGUILayout.EndHorizontal();
+        
+        osmReader.apiUrl = EditorGUILayout.TextField("API URL", osmReader.apiUrl);
+
+        if (EditorGUI.EndChangeCheck()) {
+            Debug.Log("Hello");
+            EditorUtility.SetDirty(osmReader);
+            AssetDatabase.SaveAssets();
+        }
+
         // if (null == osmReader.editorData) {
         //     osmReader.editorData = osmReader.Open();
         // }
 
-        editorData = osmReader.editorData;
 
-        osmReader.apiUrl = EditorGUILayout.TextField("API URL", osmReader.apiUrl);
+        editorData = osmReader.editorData;
 
         if (null == editorData) return;
         // Start of area coordinates
