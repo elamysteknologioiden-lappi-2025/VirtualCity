@@ -42,15 +42,19 @@ using Assets.Tools.OSMRoad.Scripts.XmlObjects;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml;
+
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
+#endif
+
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Networking;
-using UnityEngine.Profiling;
 
 /// <summary>
 /// Enum for Type (~sub-category / use type)
@@ -550,7 +554,10 @@ public class pLab_OSMReader : MonoBehaviour {
 
         if (boundsList.Count > 0) {
             XmlNode boundNode = boundsList[0];
-            pLAB_GeoUtils.LatLongtoUTM(double.Parse(boundNode.Attributes["minlat"].InnerText), double.Parse(boundNode.Attributes["minlon"].InnerText), out UTMN_Zero, out UTME_Zero);
+            double minLat = double.Parse(boundNode.Attributes["minlat"].InnerText, CultureInfo.InvariantCulture);
+            double minLon = double.Parse(boundNode.Attributes["minlon"].InnerText, CultureInfo.InvariantCulture);
+
+            pLAB_GeoUtils.LatLongtoUTM(minLat, minLon, out UTMN_Zero, out UTME_Zero);
         } else {
 
             double minLat = 99999;
@@ -591,7 +598,9 @@ public class pLab_OSMReader : MonoBehaviour {
         HandleMultiPoly();
         finishedGeneratingMap = true;
         ClearLists();
+        #if UNITY_EDITOR
         EditorUtility.UnloadUnusedAssetsImmediate();
+        #endif
     }
 
         /// <summary>
@@ -625,7 +634,9 @@ public class pLab_OSMReader : MonoBehaviour {
                     HandleMultiPoly();
                     finishedGeneratingMap = true;
                     ClearLists();
+                    #if UNITY_EDITOR
                     EditorUtility.UnloadUnusedAssetsImmediate();
+                    #endif
                 }
             }
         }
@@ -640,9 +651,23 @@ public class pLab_OSMReader : MonoBehaviour {
 
         #if UNITY_EDITOR //Editor only tag
         string scene = EditorSceneManager.GetActiveScene().name;
+
+        string path = EditorUtility.SaveFilePanelInProject("Save to...", scene, "asset", "Select where to save file");
+
+        //Check if the path is not empty and the path exists
+        if (path == null || path == "") return null;
+
         asset = ScriptableObject.CreateInstance<OSMEditorData>();
-        string assetPath = "Assets/OSMDATA_" + scene + ".asset";
-        AssetDatabase.CreateAsset(asset, assetPath);
+
+        string assetPath = path;
+
+        try {
+            AssetDatabase.CreateAsset(asset, assetPath);
+        } catch (Exception e) {
+            Debug.LogError(e.Message);
+            return null;
+        }
+        
         AssetDatabase.SaveAssets();
         Debug.Log("Created asset file for VirtualCity scene " + scene + " to " + assetPath);
         EditorGUIUtility.PingObject(asset);
@@ -655,7 +680,9 @@ public class pLab_OSMReader : MonoBehaviour {
     /// Save OSMEDitorData
     /// </summary>
     public void SaveOSMEditorData() {
+        #if UNITY_EDITOR
         AssetDatabase.SaveAssets();
+        #endif
     }
 
     /// <summary>
@@ -674,7 +701,9 @@ public class pLab_OSMReader : MonoBehaviour {
         // double xBound = 0;
         // double yBound = 0;
         if(utmX == 0 && utmY == 0) {
-            pLAB_GeoUtils.LatLongtoUTM(double.Parse(boundNode.Attributes["minlat"].InnerText), double.Parse(boundNode.Attributes["minlon"].InnerText), out utmX, out utmY);
+            double minLat = double.Parse(boundNode.Attributes["minlat"].InnerText, CultureInfo.InvariantCulture);
+            double minLon = double.Parse(boundNode.Attributes["minlon"].InnerText, CultureInfo.InvariantCulture);
+            pLAB_GeoUtils.LatLongtoUTM(minLat, minLon, out utmX, out utmY);
         }
 
         utmX = utmX - UTMN_Zero;
@@ -686,7 +715,10 @@ public class pLab_OSMReader : MonoBehaviour {
         foreach (XmlNode attr in elementList) {
             double UTMN = 0;
             double UTME = 0;
-            pLAB_GeoUtils.LatLongtoUTM(double.Parse(attr.Attributes["lat"].InnerText), double.Parse(attr.Attributes["lon"].InnerText), out UTMN, out UTME);
+            double latAttr = double.Parse(attr.Attributes["lat"].InnerText, CultureInfo.InvariantCulture);
+            double lonAttr = double.Parse(attr.Attributes["lon"].InnerText, CultureInfo.InvariantCulture);
+
+            pLAB_GeoUtils.LatLongtoUTM(latAttr, lonAttr, out UTMN, out UTME);
             var node = new Node(long.Parse(attr.Attributes["id"].InnerText), UTMN, UTME);
             nodes.Add(node);
             if (allnodes.Find(a => a.Id == node.Id) == null) allnodes.Add(node);
@@ -1693,7 +1725,7 @@ public class pLab_OSMReader : MonoBehaviour {
                     }
                 }
                 vectorsWall.Add(new Vector3((float)(y - UTME_Zero), 0, (float)(x - UTMN_Zero)));
-                vectorsWall.Add(new Vector3((float)(y - UTME_Zero), 4f, (float)(x - UTMN_Zero)));
+                vectorsWall.Add(new Vector3((float)(y - UTME_Zero), 10f, (float)(x - UTMN_Zero)));
                 if (j < (buildCount - 1)) {
                     vectors.Add(new Vector2((float)(y - UTME_Zero), (float)(x - UTMN_Zero)));
                 }
@@ -1707,7 +1739,7 @@ public class pLab_OSMReader : MonoBehaviour {
 
             List<Vector3> testList = new List<Vector3>() ;
             for (int ii = 0; ii < vertices2D.Length; ii++) {
-                testList.Add ( new Vector3(vertices2D[ii].x, 4f, vertices2D[ii].y));
+                testList.Add ( new Vector3(vertices2D[ii].x, 10f, vertices2D[ii].y));
             }
 
             poly.outside = testList;

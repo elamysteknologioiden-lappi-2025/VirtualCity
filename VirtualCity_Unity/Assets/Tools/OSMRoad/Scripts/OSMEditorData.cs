@@ -43,10 +43,10 @@ using UnityEngine;
 public class OSMEditorData : ScriptableObject {
 
     [Header("Area Coordinates")]
-    public string minLat;
-    public string minLon;
-    public string maxLat;
-    public string maxLon;
+    public double minLat;
+    public double minLon;
+    public double maxLat;
+    public double maxLon;
 
     [Header("Materials")]
     public Material waterMaterial;

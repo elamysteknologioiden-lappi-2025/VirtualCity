@@ -83,43 +83,54 @@ public class pLab_EditorOSM : Editor {
 
     public override void OnInspectorGUI() {
         pLab_OSMReader osmReader = (pLab_OSMReader) target;
-
+        EditorGUILayout.BeginHorizontal();
         osmReader.editorData = (OSMEditorData) EditorGUILayout.ObjectField("Editor data", osmReader.editorData, typeof(OSMEditorData), false);
         if (null == osmReader.editorData) {
-            osmReader.editorData = osmReader.Open();
+            if (GUILayout.Button("Create...")) {
+                OSMEditorData newData = osmReader.CreateEditorData();
+
+                if (null != newData) {
+                    osmReader.editorData = newData;
+                }
+            }
         }
+        EditorGUILayout.EndHorizontal();
+        // if (null == osmReader.editorData) {
+        //     osmReader.editorData = osmReader.Open();
+        // }
 
         editorData = osmReader.editorData;
 
         osmReader.apiUrl = EditorGUILayout.TextField("API URL", osmReader.apiUrl);
 
+        if (null == editorData) return;
         // Start of area coordinates
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Map area coordinates", EditorStyles.boldLabel);
 
-        string minLat = EditorGUILayout.TextField("Min Lat", editorData.minLat);
+        double minLat = EditorGUILayout.DoubleField("Min Lat", editorData.minLat);
         if (minLat != editorData.minLat) {
             editorData.minLat = minLat;
             EditorUtility.SetDirty(editorData);
             osmReader.SaveOSMEditorData();
         }
 
-        string minLon = EditorGUILayout.TextField("Min Lon", editorData.minLon);
+        double minLon = EditorGUILayout.DoubleField("Min Lon", editorData.minLon);
         if (minLon != editorData.minLon) {
             editorData.minLon = minLon;
             EditorUtility.SetDirty(editorData);
             osmReader.SaveOSMEditorData();
         }
 
-        string maxLat = EditorGUILayout.TextField("Max Lat", editorData.maxLat);
+        double maxLat = EditorGUILayout.DoubleField("Max Lat", editorData.maxLat);
         if (maxLat != editorData.maxLat) {
             editorData.maxLat = maxLat;
             EditorUtility.SetDirty(editorData);
             osmReader.SaveOSMEditorData();
         }
 
-        string maxLon = EditorGUILayout.TextField("Max Lon", editorData.maxLon);
+        double maxLon = EditorGUILayout.DoubleField("Max Lon", editorData.maxLon);
         if (maxLon != editorData.maxLon) {
             editorData.maxLon = maxLon;
             EditorUtility.SetDirty(editorData);
@@ -313,10 +324,10 @@ public class pLab_EditorOSM : Editor {
         if (GUILayout.Button("Generate Map (API)")) {
 
             osmReader.GetDataFromServer(
-                double.Parse(editorData.minLat),
-                double.Parse(editorData.minLon), 
-                double.Parse(editorData.maxLat), 
-                double.Parse(editorData.maxLon),
+                editorData.minLat,
+                editorData.minLon, 
+                editorData.maxLat, 
+                editorData.maxLon,
                 editorData.waterMaterial, 
                 editorData.roofMaterial, 
                 editorData.wallMaterial, 

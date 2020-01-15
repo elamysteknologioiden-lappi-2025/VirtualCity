@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   minLat: 66.7001
   minLon: 27.4047
-  maxLat: 66.7177000
+  maxLat: 66.7177
   maxLon: 27.4533
   waterMaterial: {fileID: 2100000, guid: a56e2fad1a18aaf459bc2f9b750b8749, type: 2}
   roadMaterial: {fileID: 2100000, guid: 73ba0fc010735d04898dd3c818810797, type: 2}
