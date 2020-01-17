@@ -703,6 +703,7 @@ public class pLab_OSMReader : MonoBehaviour {
         if(utmX == 0 && utmY == 0) {
             double minLat = double.Parse(boundNode.Attributes["minlat"].InnerText, CultureInfo.InvariantCulture);
             double minLon = double.Parse(boundNode.Attributes["minlon"].InnerText, CultureInfo.InvariantCulture);
+
             pLAB_GeoUtils.LatLongtoUTM(minLat, minLon, out utmX, out utmY);
         }
 
@@ -823,8 +824,9 @@ public class pLab_OSMReader : MonoBehaviour {
 
             if (relations[i].OuterVectors.Count > 0) {
                 Poly2Mesh.CreateGameObject(poly, go);
-                go.GetComponent<MeshRenderer>().sharedMaterial = material;
-
+                MeshRenderer goMeshRenderer = go.GetComponent<MeshRenderer>();
+                goMeshRenderer.sharedMaterial = material;
+                goMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
                 go.layer = layer;
                 MeshCollider meshCollider = go.AddComponent<MeshCollider>();
@@ -912,7 +914,10 @@ public class pLab_OSMReader : MonoBehaviour {
                 if (tempVectors.Count > 0) {
                     GameObject gameObject = Poly2Mesh.CreateGameObject(poly, go);
 
-                    go.GetComponent<MeshRenderer>().sharedMaterial = material;
+                    MeshRenderer goMeshRenderer = go.GetComponent<MeshRenderer>();
+
+                    goMeshRenderer.sharedMaterial = material;
+                    goMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
                     gameObject.layer = layer;
 
@@ -1653,6 +1658,7 @@ public class pLab_OSMReader : MonoBehaviour {
             }
         } // END OF WAYS
 
+        NavMesh.RemoveAllNavMeshData();
         GenerateRoads("road", roads, roadsObjects, waysParent, nodes, axBound, ayBound, block);
         GenerateRoads("railway", railways, railwaysObjects, waysParent, nodes, axBound, ayBound, block);
         GenerateRoads("stream", streams, streamObjects, waysParent, nodes, axBound, ayBound, block);
@@ -1725,7 +1731,7 @@ public class pLab_OSMReader : MonoBehaviour {
                     }
                 }
                 vectorsWall.Add(new Vector3((float)(y - UTME_Zero), 0, (float)(x - UTMN_Zero)));
-                vectorsWall.Add(new Vector3((float)(y - UTME_Zero), 10f, (float)(x - UTMN_Zero)));
+                vectorsWall.Add(new Vector3((float)(y - UTME_Zero), 4f, (float)(x - UTMN_Zero)));
                 if (j < (buildCount - 1)) {
                     vectors.Add(new Vector2((float)(y - UTME_Zero), (float)(x - UTMN_Zero)));
                 }
@@ -1739,7 +1745,7 @@ public class pLab_OSMReader : MonoBehaviour {
 
             List<Vector3> testList = new List<Vector3>() ;
             for (int ii = 0; ii < vertices2D.Length; ii++) {
-                testList.Add ( new Vector3(vertices2D[ii].x, 10f, vertices2D[ii].y));
+                testList.Add ( new Vector3(vertices2D[ii].x, 4f, vertices2D[ii].y));
             }
 
             poly.outside = testList;
@@ -1844,6 +1850,7 @@ public class pLab_OSMReader : MonoBehaviour {
     /// <param name="ayBound"></param>
     /// <param name="block"></param>
     private void GenerateRoads(string category, List<Way> roads, List<Transform> roadsObjects, GameObject waysParent, List<Node> nodes, double axBound, double ayBound, GameObject block) {
+        // NavMesh.RemoveAllNavMeshData();
         // Start of Roads
         for (int i = 0; i < roads.Count; i++) {
             if (roads[i].WayNodeIds.Count <= 1) continue;
@@ -1909,16 +1916,36 @@ public class pLab_OSMReader : MonoBehaviour {
 
         foreach (Transform r in roadsObjects) {
             combine[iaa].mesh = r.gameObject.GetComponent<MeshFilter>().sharedMesh;
-            combine[iaa].transform = r.gameObject.GetComponent<MeshFilter>().transform.localToWorldMatrix;
+            combine[iaa].transform = r.localToWorldMatrix;
+            // combine[iaa].transform = r.gameObject.GetComponent<MeshFilter>().transform.localToWorldMatrix;
 
             iaa++;
         }
 
-        GameObject combineGO = new GameObject("combine");
-        combineGO.AddComponent<MeshFilter>();
+        GameObject combineGO = new GameObject("combine " + category);
+        MeshFilter goMeshFilter = combineGO.AddComponent<MeshFilter>();
         combineGO.AddComponent<MeshRenderer>();
-        combineGO.GetComponent<MeshFilter>().sharedMesh = new Mesh();
-        combineGO.GetComponent<MeshFilter>().sharedMesh.CombineMeshes(combine);
+        goMeshFilter.sharedMesh = new Mesh();
+        goMeshFilter.sharedMesh.CombineMeshes(combine);
+
+        /*
+        This will make the combineGo act as the road.
+        If you want to use this,make sure you remove the DestroyImmediate(combineGo) which is at the end of this function
+        combineGO.GetComponent<MeshRenderer>().sharedMaterial = roadMaterial;
+
+        List<Vector3> goMeshVerts = new List<Vector3>();
+        goMeshFilter.sharedMesh.GetVertices(goMeshVerts);
+        Vector2[] gouvs = new Vector2[goMeshVerts.Count];
+
+        for (int uv = 0; uv < goMeshVerts.Count; uv++) {
+            gouvs[uv] = new Vector2(goMeshVerts[uv].x, goMeshVerts[uv].z);
+        }
+
+        goMeshFilter.sharedMesh.uv = gouvs;
+        goMeshFilter.sharedMesh.RecalculateNormals();
+        goMeshFilter.sharedMesh.RecalculateBounds();
+        */
+
 
         combineGO.isStatic = true;
         BuildNavMesh(combineGO.transform, axBound, ayBound);
@@ -1933,16 +1960,24 @@ public class pLab_OSMReader : MonoBehaviour {
         }
         int[] polygons = navMesh.indices;
 
+
         Mesh roadCombineMesh = new Mesh();
+
+        if (verticesa.Length > Int16.MaxValue) {
+            Debug.LogWarning("IndexFormat for combined road mesh was changed from UInt16 to UInt32. This will take more memory, and may not work on some platforms such as mobile phones!");
+            roadCombineMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        }
 
         roadCombineMesh.vertices = verticesa;
         roadCombineMesh.triangles = polygons;
         roadCombineMesh.uv = uvs;
         roadCombineMesh.RecalculateNormals();
+
         roadCombineMesh.RecalculateBounds();
 
         GameObject roadCombineGameObject = new GameObject("roadCombineGameObject");
         MeshRenderer meshRenderer = roadCombineGameObject.AddComponent<MeshRenderer>();
+        meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         MeshFilter meshFilter = roadCombineGameObject.AddComponent<MeshFilter>();
         meshFilter.sharedMesh = roadCombineMesh;
 
@@ -1962,12 +1997,15 @@ public class pLab_OSMReader : MonoBehaviour {
         }
 
         roadCombineGameObject.transform.parent = block.transform;
+        //Move the road a bit higher so it will on top
+        roadCombineGameObject.transform.Translate(0, 0.03f, 0);
 
         DestroyImmediate(combineGO);
 
         for (int i = 0; i < roads.Count; i++) {
             roadsObjects[i].gameObject.SetActive(false);
         }
+        NavMesh.RemoveAllNavMeshData();
         // End of Roads
     }
 
@@ -2094,7 +2132,7 @@ public class pLab_OSMReader : MonoBehaviour {
     private void BuildNavMesh(Transform xform, double aX, double aY) {
         navMeshDataInstance.Remove();
 
-        Vector3 boundsSize = isGeneratingFromFile ? new Vector3(5000, 100, 5000): new Vector3(500, 100, 500);
+        Vector3 boundsSize = isGeneratingFromFile ? new Vector3(100000, 5, 100000): new Vector3(700, 5, 700);
         aX += boundsSize.x / 2;
         aY += boundsSize.z / 2;
 

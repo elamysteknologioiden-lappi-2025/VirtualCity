@@ -46,6 +46,7 @@ using System.IO;
 /// pLab_EditorOSM
 /// </summary>
 [CustomEditor(typeof(pLab_OSMReader))]
+[CanEditMultipleObjects]
 public class pLab_EditorOSM : Editor {
 
 
@@ -99,7 +100,6 @@ public class pLab_EditorOSM : Editor {
         osmReader.apiUrl = EditorGUILayout.TextField("API URL", osmReader.apiUrl);
 
         if (EditorGUI.EndChangeCheck()) {
-            Debug.Log("Hello");
             EditorUtility.SetDirty(osmReader);
             AssetDatabase.SaveAssets();
         }
@@ -314,7 +314,6 @@ public class pLab_EditorOSM : Editor {
         EditorGUI.BeginChangeCheck();
         Color32 buildingInfoTextColor = EditorGUILayout.ColorField("Building Infotext Color", editorData.buildingInfoTextColor);
         if (EditorGUI.EndChangeCheck()) {
-            Debug.Log("Building info text color Was changed");
             editorData.buildingInfoTextColor = buildingInfoTextColor;
             EditorUtility.SetDirty(editorData);
         }
@@ -322,7 +321,6 @@ public class pLab_EditorOSM : Editor {
         EditorGUI.BeginChangeCheck();
         Color32 parkingLotTextColor = EditorGUILayout.ColorField("Parkinglot Infotext Color", editorData.parkingLotTextColor);
         if (EditorGUI.EndChangeCheck()) {
-            Debug.Log("Parkinglot info text color Was changed");
             editorData.parkingLotTextColor = parkingLotTextColor;
             EditorUtility.SetDirty(editorData);
         }
